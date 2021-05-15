@@ -123,11 +123,10 @@ make.aneuploids = function(cell.matrix, dispersion, n.cells){
 
 # Calculate the number of euploids in the 5 cells at
 # the centre of the matrix
-make.counts = function(prop.aneuploids, dispersion, ...){
-  # How many cells in the embryo at this stage?
-  dim.x = 10
-  dim.y = 10
+make.count = function(prop.aneuploids, dispersion, make.chart=F, dim.x=10, dim.y=10, ...){
   
+  # How many cells in the embryo at this stage?
+
   n.aneuploids = floor(prop.aneuploids * dim.x * dim.y)
 
   # True is euploid
@@ -141,58 +140,80 @@ make.counts = function(prop.aneuploids, dispersion, ...){
   filt$x = as.integer(filt$x)
   filt$y = filt$y[,1]
   
-  # p = ggplot(filt, aes(x=x, y=y, col=value))+
-  #   geom_point(size=6)+
-  #   scale_colour_manual(values = c("red", "darkgreen"))+
-  #   theme(axis.text = element_blank(), axis.title = element_blank())
-  
   # Sample 5 cells from the centre
-  x.centre = floor(dim.x/2)
-  y.centre = floor(dim.y/2)
+  x.centre = ceiling(dim.x/2)
+  y.centre = ceiling(dim.y/2)
   count = as.integer(result[y.centre, x.centre])+
     as.integer(result[y.centre+1, x.centre])+
     as.integer(result[y.centre-1, x.centre])+
     as.integer(result[y.centre, x.centre+1])+
     as.integer(result[y.centre, x.centre-1])
-  # return(list("plot"=p, "n.euploid"=count))
-  return(count)
+  
+  p=NULL
+  if(make.chart){
+    p = ggplot(filt, aes(x=x, y=y, col=value))+
+      geom_point(size=6)+
+      geom_segment(aes(x =x.centre-1.5 , y = y.centre+0.5, xend = x.centre+1.5, yend = y.centre+0.5), col="black", size=2)+
+      geom_segment(aes(x =x.centre-1.5 , y = y.centre-0.5, xend = x.centre+1.5, yend = y.centre-0.5), col="black", size=2)+
+      geom_segment(aes(x =x.centre-0.5 , y = y.centre-1.5, xend = x.centre-0.5, yend = y.centre+1.5), col="black", size=2)+
+      geom_segment(aes(x =x.centre+0.5 , y = y.centre-1.5, xend = x.centre+0.5, yend = y.centre+1.5), col="black", size=2)+
+      geom_segment(aes(x =x.centre-1.5 , y = y.centre-0.5, xend = x.centre-1.5, yend = y.centre+0.5), col="black", size=2)+
+      geom_segment(aes(x =x.centre+1.5 , y = y.centre-0.5, xend = x.centre+1.5, yend = y.centre+0.5), col="black", size=2)+
+      geom_segment(aes(x =x.centre-0.5 , y = y.centre+1.5, xend = x.centre+0.5, yend = y.centre+1.5), col="black", size=2)+
+      geom_segment(aes(x =x.centre-0.5 , y = y.centre-1.5, xend = x.centre+0.5, yend = y.centre-1.5), col="black", size=2)+
+      scale_colour_manual(values = c("FALSE"="red", "TRUE"="darkgreen"))+
+      theme_minimal()+
+      labs(title=paste("Example plot:", count, "euploid cells in biopsy"))+
+      theme(axis.text = element_blank(), 
+            axis.title = element_blank(),
+            axis.line = element_blank(),
+            legend.position = "none")
+
+  }
+  
+  return(list("plot"=p, "n.euploid"=count))
 }
 
 
 ####################################
 # Running the analysis
 ####################################
-
-# Make a grid of parameters
-props = seq(0.0, 1.0, 0.2)
-disps = seq(0.1, 1, 0.2) # dispersion - if 0, all one clump, if 1 all cells individual
-combs = expand.grid(props, disps)
-
-# Prepare result data frame
-result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
-
-iterations = 100 # number of simulations per parameter combination
-
-for(i in 1:nrow(combs)){
-  cat("Combination", i, "\n")
-  counts = sapply(1:iterations, make.counts, 
-                  prop.aneuploids=combs$Var1[i], 
-                  dispersion=combs$Var2[i])
-  temp = data.frame("prop"=rep(combs$Var1[i], iterations),
-                    "disp"=rep(combs$Var2[i], iterations),
-                    "e" = counts)
-  result = rbind(result, temp)
-}
-
-# Plot the results
-result = na.omit(result)
-ggplot(result, aes(x=e))+
-  geom_bar()+
-  facet_grid(prop~disp)+
-  labs(title=paste("Cols = dispersal (0=clumped, 1=dispersed), rows = proportion aneuploid cells"),
-       x="Number of euploid cells in 5 cell biopsy",
-       y="Simulations in which this occurred")
-
+# 
+# # Make a grid of parameters
+# props = seq(0.0, 1.0, 0.2)
+# disps = seq(0.1, 1, 0.2) # dispersion - if 0, all one clump, if 1 all cells individual
+# combs = expand.grid(props, disps)
+# 
+# # Prepare result data frame
+# result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
+# 
+# iterations = 10 # number of simulations per parameter combination
+# 
+# for(i in 1:nrow(combs)){
+#   cat("Combination", i, "\n")
+#   counts.and.plots = lapply(1:iterations, make.count, 
+#                             prop.aneuploids=combs$Var1[i], 
+#                             dispersion=combs$Var2[i], make.chart=T)
+#   
+#   # Extract counts and plots separately
+#   counts = sapply(1:iterations, function(i) counts.and.plots[[i]][['n.euploid']])
+#   plots  = lapply(1:iterations, function(i) counts.and.plots[[i]][['plot']])
+#   
+#   temp = data.frame("prop"=rep(combs$Var1[i], iterations),
+#                     "disp"=rep(combs$Var2[i], iterations),
+#                     "e" = counts)
+#   result = rbind(result, temp)
+# }
+# 
+# # Plot the results
+# result = na.omit(result)
+# ggplot(result, aes(x=e))+
+#   geom_bar()+
+#   facet_grid(prop~disp)+
+#   labs(title=paste("Cols = dispersal (0=clumped, 1=dispersed), rows = proportion aneuploid cells"),
+#        x="Number of euploid cells in 5 cell biopsy",
+#        y="Simulations in which this occurred")
+# 
 
 
 ####################################
@@ -215,7 +236,7 @@ test.make.seed = function(){
                             msg=paste("Exp:", n.aneuploid, "Act:", sum.aneuploids))
   }
 }
-test.make.seed()
+# test.make.seed()
 
 # Test that pick.seed can find all possible seeds
 test.pick.seed = function(){
@@ -250,4 +271,4 @@ test.pick.seed = function(){
                             msg="Result matrix is not equal to cell matrix")
   }
 }
-test.pick.seed()
+# test.pick.seed()
