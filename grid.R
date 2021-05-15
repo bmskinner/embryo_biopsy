@@ -167,7 +167,8 @@ make.count = function(prop.aneuploids, dispersion, make.chart=F, dim.x=10, dim.y
       theme(axis.text = element_blank(), 
             axis.title = element_blank(),
             axis.line = element_blank(),
-            legend.position = "none")
+            legend.position = "none",
+            panel.grid = element_blank())
 
   }
   

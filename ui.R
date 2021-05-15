@@ -45,6 +45,13 @@ fluidPage(theme = shinytheme("lumen"),
                 
               ),
               mainPanel(
+                p("The grid below contains euploid (green) and aneuploid (red) cells.
+                           Use the settings on the left to adjust the proportion of aneuploid
+                           cells in the data, as well as their dispersal (low dispersal means they
+                           are found mostly in clumps, high dispersal means individual cells are more
+                           likely). A new grid is generated for each simulation; the first grid
+                           is shown below as an example, and the results from all grids are given in 
+                           the histogram."),
                 plotOutput(outputId = "biopsyPlot", height = "300px"),
                 plotOutput(outputId = "iterationSummary", height = "300px")
               ))
