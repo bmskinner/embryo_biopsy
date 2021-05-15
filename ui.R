@@ -1,7 +1,9 @@
 # Control the UI
+library(shiny)
+library(shinythemes)
 
-create.ui = function(){
-  fluidPage(theme = shinytheme("lumen"),
+# Define the UI
+fluidPage(theme = shinytheme("lumen"),
             titlePanel("Aneuploidies seen in biopsies"),
             sidebarLayout(
               sidebarPanel(
@@ -20,7 +22,7 @@ create.ui = function(){
                              step = 0.05),
                 
                 numericInput(inputId = "iterations",
-                             label = strong("Simulations to run"),
+                             label = strong("Simulations to run (1-100)"),
                              value = 1,
                              min=1,
                              max = 100,
@@ -46,5 +48,4 @@ create.ui = function(){
                 plotOutput(outputId = "biopsyPlot", height = "300px"),
                 plotOutput(outputId = "iterationSummary", height = "300px")
               ))
-  )
-}
+)
