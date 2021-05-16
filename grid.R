@@ -116,7 +116,9 @@ set.value = function(m, point, value){
 # Returns the modified matrix
 make.aneuploids = function(cell.matrix, dispersion, n.cells){
   
-  total.cells = ncol(cell.matrix) * nrow(cell.matrix)
+  w = ncol(cell.matrix)
+  h = nrow(cell.matrix)
+  total.cells = w * h
   
   # If there are no aneuploid cells, return the original matrix
   if(n.cells == 0 ){
@@ -125,29 +127,34 @@ make.aneuploids = function(cell.matrix, dispersion, n.cells){
   
   # If all the cells are aneuploid, just return a matrix directly
   if(n.cells == total.cells){
-    return(matrix(F, nrow=nrow(cell.matrix), ncol=ncol(cell.matrix)))
+    return(matrix(F, nrow=h, ncol=w))
   }
   
   cell.type = F # default to setting aneuploid
   if(n.cells > total.cells/2){ # if more than half the cells should be aneuploid,
     cell.type=T                # make the matrix aneuploid, and set euploids instead
-    cell.matrix = matrix(F, nrow=nrow(cell.matrix), ncol=ncol(cell.matrix))
+    cell.matrix = matrix(F, nrow=h, ncol=w)
     n.cells = total.cells - n.cells # only perform the smaller operation
   }
   
   # Must have a minimum of 1 seed
   n.seeds = max(1, floor(dispersion * n.cells))
   
-  # Set up seed aneuploid cells randomly distributed
-  for(i in 1:n.seeds){
-    cell.matrix = make.seed(cell.matrix, cell.type)
+  # Set up seed cells randomly distributed
+  seeds.to.add = n.seeds
+  while(seeds.to.add>0){
+    x = sample(1:w, size=1)
+    y = sample(1:h, size=1)
+    if(cell.matrix[y, x]!=cell.type){
+      cell.matrix[y, x] = cell.type
+      seeds.to.add = seeds.to.add - 1
+    }
   }
-  
+
   # cat(paste(n.seeds, " seeds created\n"))
   
   n.remaining = n.cells - n.seeds
-  # iterations = 0
-  
+
   # Expand the seeds randomly for all remaining cells
   while(n.remaining>0){
     
@@ -156,7 +163,9 @@ make.aneuploids = function(cell.matrix, dispersion, n.cells){
 
     # Choose a random valid 8-connected point adjacent to the seed
     new.point = pick.adjacent(cell.matrix, point, !cell.type)
-    cell.matrix = set.value(cell.matrix, new.point, cell.type)
+    
+    # Update the matrix
+    cell.matrix[new.point[['y']], new.point[['x']]] = cell.type
     n.remaining = n.remaining-1
   }
   
@@ -230,7 +239,7 @@ combs = expand.grid(props, disps)
 # Prepare result data frame
 result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
 
-iterations = 500 # number of simulations per parameter combination
+iterations = 100 # number of simulations per parameter combination
 
 for(i in 1:nrow(combs)){
   cat("Combination", i, "Disp:", combs$Var2[i], "Prop:", combs$Var1[i],"\n")
