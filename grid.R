@@ -93,9 +93,16 @@ pick.adjacent = function(m, point, value){
   if(m[y.below, x.right]==value) possible.points = c(possible.points, x.right, y.below)
   
   # Choose a random point from those that are valid
-  new.point = sample(1:length(possible.points)/2, size=1)*2
+  # assert_that(length(possible.points)%%2==0, msg=paste("Possible points length is", length(possible.points)))
+
+  new.point = sample(1:(length(possible.points)/2), size=1)*2
   
-  return(list('x'=possible.points[new.point-1], 'y'=possible.points[new.point]))
+  # assert_that(new.point>1 & new.point<=length(possible.points), msg=paste("New point is ", new.point))
+  
+  # cat("Using row index", new.point, "selecting point", possible.points[new.point-1], ",", possible.points[new.point], "\n")
+  
+  return(list('x'=possible.points[new.point-1], 
+              'y'=possible.points[new.point]))
 }
 
 # Set a value in a matrix
@@ -124,11 +131,11 @@ make.aneuploids = function(cell.matrix, dispersion, n.cells){
   }
   
   cell.type = F # default to setting aneuploid
-  if(n.cells > total.cells/2){ # if more than half the cells should be aneuploid,
-    cell.type=T                # make the matrix aneuploid, and set euploids instead
-    cell.matrix = matrix(F, nrow=h, ncol=w)
-    n.cells = total.cells - n.cells # only perform the smaller operation
-  }
+  # if(n.cells > total.cells/2){ # if more than half the cells should be aneuploid,
+  #   cell.type=T                # make the matrix aneuploid, and set euploids instead
+  #   cell.matrix = matrix(F, nrow=h, ncol=w)
+  #   n.cells = total.cells - n.cells # only perform the smaller operation
+  # }
   
   # Must have a minimum of 1 seed
   n.seeds = max(1, floor(dispersion * n.cells))
@@ -144,23 +151,35 @@ make.aneuploids = function(cell.matrix, dispersion, n.cells){
     }
   }
 
-  # cat(paste(n.seeds, " seeds created\n"))
-  
   n.remaining = n.cells - n.seeds
+  # n.created = total.cells- sum(cell.matrix) # F counts as 0
+  # assert_that(n.created==n.seeds, msg=paste("Created", n.created, "seeds, expected", n.seeds))
+  
+  # cat(paste(n.seeds, " seeds created, expanding by", n.remaining, "\n"))
 
   # Expand the seeds randomly for all remaining cells
   while(n.remaining>0){
-    
     # Choose a random seed
     point = pick.seed(cell.matrix, cell.type)
 
     # Choose a random valid 8-connected point adjacent to the seed
+    # that does not have the target cell type
     new.point = pick.adjacent(cell.matrix, point, !cell.type)
+    
+    if(length(new.point)==0) cat("Point not found!\n")
     
     # Update the matrix
     cell.matrix[new.point[['y']], new.point[['x']]] = cell.type
+    
+    # cat("Created point", new.point[['x']], ",", new.point[['y']], "\n")
+    # n.created = total.cells- sum(cell.matrix)
     n.remaining = n.remaining-1
+    
+    # cat("Expanded seed,", n.created, "of",n.cells, "created,", n.remaining, "remaining\n")
   }
+  
+  # n.created = total.cells- sum(cell.matrix) # F counts as 0
+  # assert_that(n.created==n.cells, msg=paste("Created", n.created, "total aneuploid cells, expected", n.cells, "aneuploids"))
   
   return(cell.matrix)
 }
@@ -227,17 +246,18 @@ make.count = function(prop.aneuploids, dispersion, make.chart=F, dim.x=10, dim.y
 
 runAnalysis = function(){
   # Make a grid of parameters
-  props = seq(0.0, 1.0, 0.1)
-  disps = seq(0.1, 1, 0.1) # dispersion - if 0, all one clump, if 1 all cells individual
+  props = seq(0.0, 1.0, 0.05)
+  disps = seq(0.0, 0.5, 0.1) # dispersion - if 0, all one clump, if 1 all cells individual
   combs = expand.grid(props, disps)
   
   # Prepare result data frame
   result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
   
-  iterations = 500 # number of simulations per parameter combination
+  iterations = 100 # number of simulations per parameter combination
   
   for(i in 1:nrow(combs)){
-    cat("Combination", i, "Disp:", combs$Var2[i], "Prop:", combs$Var1[i],"\n")
+    n.aneu = floor(combs$Var1[i] * 10 * 10)
+    cat("Combination", i, "of", nrow(combs), "Disp:", combs$Var2[i], "Prop:", combs$Var1[i],"for",n.aneu, "aneuploid cells\n")
     ptm <- proc.time()
     counts.and.plots = lapply(1:iterations, make.count,
                               prop.aneuploids=combs$Var1[i],
@@ -256,14 +276,30 @@ runAnalysis = function(){
   
   # Plot the results
   result = na.omit(result)
-  ggplot(result, aes(x=e))+
+  
+  bar.plot = ggplot(result, aes(x=e))+
     geom_bar()+
     facet_grid(prop~disp)+
     labs(title=paste("Cols = dispersal (0=clumped, 1=dispersed), rows = proportion aneuploid cells"),
          x="Number of euploid cells in 5 cell biopsy",
          y="Simulations in which this occurred")
   
+  
+  vals = result %>% group_by(prop, disp) %>%
+    summarise(meanEuploid = mean(e))
+
+  return(list('bars' = bar.plot, 'vals'=vals))
+  
 }
+
+result = runAnalysis()
+
+ggplot(result[['vals']], aes(x=disp, y=prop, fill=meanEuploid))+
+  geom_tile()+
+  labs(x="Dispersal", y="Proportion aneuploid", fill="Mean euploid")+
+  scale_fill_viridis_c()+
+  theme_minimal()
+
 
 ####################################
 # TESTS
