@@ -3,16 +3,41 @@ library(tidyverse)
 library(matrixStats)
 library(assertthat)
 
+# Test if the 8-connected block around the point
+# has the same value.
+# Return true if all points have the same value
+block.has.value = function(m, x, y){
+  
+  value = m[y, x]
+  x.left  = ifelse(x==1, ncol(m), x-1)
+  x.right = ifelse(x==ncol(m), 1, x+1)
+  y.below = ifelse(y==1, nrow(m), y-1)
+  y.above = ifelse(y==nrow(m), 1, y+1)
+  
+  # print(paste("above:", y.above, "below:", y.below, "left:", x.left, "right:", x.right))
+  
+  return(  m[y.above, x.left ]==value & 
+           m[y.above, x      ]==value & 
+           m[y.above, x.right]==value &
+           m[y,       x.left ]==value & 
+           m[y,       x.right]==value &
+           m[y.below, x.left ]==value & 
+           m[y.below, x      ]==value & 
+           m[y.below, x.right]==value)
+}
+
 # Get all points in the matrix with the given value
+# which are not completely surrounded by points with
+# the same value
 # Returns a data frame with x and y columns
 get.points = function(m, value){
-  w = ncol(m)
-  h = nrow(m)
-  result = data.frame("points"=list())
-  for(i in 1:w){
-    for(j in 1:h){
-      if(m[j, i]==value){
-        result = rbind(result, list('x'=i, 'y'=j))
+  result = data.frame('x'=NA, 'y'=NA)
+  for(x in 1:ncol(m)){
+    for(y in 1:nrow(m)){
+      # We don't need to include in seeds values that are 
+      # completely surrounded by points with the same value
+      if(m[y, x]==value & !block.has.value(m, x, y)){
+        result = rbind(result, c('x'=x, 'y'=y))
       }
     }
   }
@@ -34,26 +59,59 @@ make.seed = function(m, value){
 # Returns a point
 pick.seed = function(m, value){
   all.seeds = get.points(m, value)
+  # print("All possible seeds:")
+  # print(all.seeds)
   random.row = sample(1:nrow(all.seeds), size=1)
+  # print(paste("Row:", random.row))
   x = all.seeds$x[random.row]
   y = all.seeds$y[random.row]
+  
+  if(nrow(all.seeds)==0) print(m)
+  # cat("x", x, "y", y, "\n")
   if(m[y, x]==value) return(list("x" = x, "y"=y))
   return(pick.seed(m, value))
 }
 
 # Pick an 8 connected point in a matrix
+# that has the given value
 # Returns a point
-pick.adjacent = function(m, point){
-  new.x = point[['x']]+floor(runif(1, -1, 1))
-  new.y = point[['y']]+floor(runif(1, -1, 1))
+pick.adjacent = function(m, point, value){
+  x = point[['x']]
+  y = point[['y']]
+  x.left  = ifelse(x==1, ncol(m), x-1)
+  x.right = ifelse(x==ncol(m), 1, x+1)
+  y.below = ifelse(y==1, nrow(m), y-1)
+  y.above = ifelse(y==nrow(m), 1, y+1)
+  
+  possible.points = c()
+  
+  if(m[y.above, x.left ]==value) possible.points = c(possible.points, x.left , y.above)
+  if(m[y.above, x      ]==value) possible.points = c(possible.points, x      , y.above)
+  if(m[y.above, x.right]==value) possible.points = c(possible.points, x.right, y.above)
+  
+  if(m[y      , x.left ]==value) possible.points = c(possible.points, x.left , y      )
+  if(m[y      , x.right]==value) possible.points = c(possible.points, x.right, y      )
+  
+  if(m[y.below, x.left ]==value) possible.points = c(possible.points, x.left , y.below)
+  if(m[y.below, x      ]==value) possible.points = c(possible.points, x      , y.below)
+  if(m[y.below, x.right]==value) possible.points = c(possible.points, x.right, y.below)
+  
+  # print(str(possible.points))
+  new.point = sample(1:length(possible.points)/2, size=1)*2
+  
+  return(list('x'=possible.points[new.point-1], 'y'=possible.points[new.point]))
+  
+  # Old function
+  # new.x = point[['x']]+sample(-1:1, size=1)
+  # new.y = point[['y']]+sample(-1:1, size=1)
   
   # Wrap around edges
-  if(new.x>ncol(m)) new.x = 1
-  if(new.x<1) new.x=ncol(m)
-  if(new.y<1) new.y=nrow(m)
-  if(new.y>nrow(m)) new.y = 1
-  
-  return(list("x" = new.x, "y"=new.y))
+  # if(new.x>ncol(m)) new.x = 1
+  # if(new.x<1) new.x=ncol(m)
+  # if(new.y<1) new.y=nrow(m)
+  # if(new.y>nrow(m)) new.y = 1
+
+  # return(list("x" = new.x, "y"=new.y))
 }
 
 # Set a value in a matrix
@@ -105,17 +163,10 @@ make.aneuploids = function(cell.matrix, dispersion, n.cells){
     # Choose a random seed
     point = pick.seed(cell.matrix, cell.type)
 
-    new.point = pick.adjacent(cell.matrix, point)
-    # Only proceed if the new point is correct type - we can't double count
-    if(cell.matrix[new.point[['y']], new.point[['x']]]!=cell.type){
-      cell.matrix = set.value(cell.matrix, new.point, cell.type)
-      n.remaining = n.remaining-1
-    }
-    
-    # if(iterations>n.cells*50){
-    #   cat(paste(n.remaining, "of", n.cells, "cells to add;", new.point[['x']], ",", new.point[['y']], "unsuitable\n"))
-    # }
-    # iterations = iterations+1
+    # Choose a random valid 8-connected point adjacent to the seed
+    new.point = pick.adjacent(cell.matrix, point, !cell.type) # mod
+    cell.matrix = set.value(cell.matrix, new.point, cell.type) # new
+    n.remaining = n.remaining-1
   }
   
   return(cell.matrix)
@@ -179,47 +230,76 @@ make.count = function(prop.aneuploids, dispersion, make.chart=F, dim.x=10, dim.y
 ####################################
 # Running the analysis
 ####################################
-# 
-# # Make a grid of parameters
-# props = seq(0.0, 1.0, 0.2)
-# disps = seq(0.1, 1, 0.2) # dispersion - if 0, all one clump, if 1 all cells individual
-# combs = expand.grid(props, disps)
-# 
-# # Prepare result data frame
-# result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
-# 
-# iterations = 10 # number of simulations per parameter combination
-# 
-# for(i in 1:nrow(combs)){
-#   cat("Combination", i, "\n")
-#   counts.and.plots = lapply(1:iterations, make.count, 
-#                             prop.aneuploids=combs$Var1[i], 
-#                             dispersion=combs$Var2[i], make.chart=T)
-#   
-#   # Extract counts and plots separately
-#   counts = sapply(1:iterations, function(i) counts.and.plots[[i]][['n.euploid']])
-#   plots  = lapply(1:iterations, function(i) counts.and.plots[[i]][['plot']])
-#   
-#   temp = data.frame("prop"=rep(combs$Var1[i], iterations),
-#                     "disp"=rep(combs$Var2[i], iterations),
-#                     "e" = counts)
-#   result = rbind(result, temp)
-# }
-# 
-# # Plot the results
-# result = na.omit(result)
-# ggplot(result, aes(x=e))+
-#   geom_bar()+
-#   facet_grid(prop~disp)+
-#   labs(title=paste("Cols = dispersal (0=clumped, 1=dispersed), rows = proportion aneuploid cells"),
-#        x="Number of euploid cells in 5 cell biopsy",
-#        y="Simulations in which this occurred")
-# 
+
+# Make a grid of parameters
+props = seq(0.0, 1.0, 0.2)
+disps = seq(0.1, 1, 0.2) # dispersion - if 0, all one clump, if 1 all cells individual
+combs = expand.grid(props, disps)
+
+# Prepare result data frame
+result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
+
+iterations = 100 # number of simulations per parameter combination
+
+for(i in 1:nrow(combs)){
+  cat("Combination", i, "Disp:", combs$Var2[i], "Prop:", combs$Var1[i],"\n")
+  ptm <- proc.time()
+  counts.and.plots = lapply(1:iterations, make.count,
+                            prop.aneuploids=combs$Var1[i],
+                            dispersion=combs$Var2[i], make.chart=T, dim.x=10, dim.y=10)
+  time.taken = proc.time() - ptm
+  cat("Combination", i, "took ", time.taken[['elapsed']], "seconds\n")
+  # Extract counts and plots separately
+  counts = sapply(1:iterations, function(i) counts.and.plots[[i]][['n.euploid']])
+  plots  = lapply(1:iterations, function(i) counts.and.plots[[i]][['plot']])
+
+  temp = data.frame("prop"=rep(combs$Var1[i], iterations),
+                    "disp"=rep(combs$Var2[i], iterations),
+                    "e" = counts)
+  result = rbind(result, temp)
+}
+
+# Plot the results
+result = na.omit(result)
+ggplot(result, aes(x=e))+
+  geom_bar()+
+  facet_grid(prop~disp)+
+  labs(title=paste("Cols = dispersal (0=clumped, 1=dispersed), rows = proportion aneuploid cells"),
+       x="Number of euploid cells in 5 cell biopsy",
+       y="Simulations in which this occurred")
+
 
 
 ####################################
 # TESTS
 ####################################
+
+create.test.matrix = function(){
+  dim.x = 10
+  dim.y = 10
+  cell.matrix = matrix(T, nrow=dim.y, ncol=dim.x)
+  cell.matrix[4, 4]=F
+  cell.matrix[4, 5]=F
+  cell.matrix[4, 6]=F
+  cell.matrix[5, 4]=F
+  cell.matrix[5, 5]=F
+  cell.matrix[5, 6]=F
+  cell.matrix[6, 4]=F
+  cell.matrix[6, 5]=F
+  cell.matrix[6, 6]=F
+  
+  cell.matrix[1, 1]=F
+  cell.matrix[1, 2]=F
+  cell.matrix[1, 10]=F
+  cell.matrix[2, 1]=F
+  cell.matrix[2, 2]=F
+  cell.matrix[2, 10]=F
+  cell.matrix[10, 1]=F
+  cell.matrix[10, 2]=F
+  cell.matrix[10, 10]=F
+  
+  return(cell.matrix)
+}
 
 # Test that make seed can fill the entire grid
 # and produces the expected number of seeds
@@ -240,6 +320,8 @@ test.make.seed = function(){
 # test.make.seed()
 
 # Test that pick.seed can find all possible seeds
+# Note this will not work until it has been corrected for
+# the block filter
 test.pick.seed = function(){
   dim.x = 10
   dim.y = 10
@@ -273,3 +355,44 @@ test.pick.seed = function(){
   }
 }
 # test.pick.seed()
+
+test.block.has.value = function(){
+  cell.matrix = create.test.matrix()
+  print(cell.matrix)
+  for(w in 1:ncol(cell.matrix)){
+    for(h in 1:nrow(cell.matrix)){
+      if((w==5 & h==5) | (w==1 & h==1)){
+        assertthat::assert_that(block.has.value(cell.matrix, w, h),
+                                msg = paste("Entire block does not have value in x", w, "y", h))
+      }
+      # There are also blocks with T values
+      # else{
+      #   assertthat::assert_that(!block.has.value(cell.matrix, w, h), 
+      #                           msg = paste("Entire block has value in x", w, "y", h))
+      # }
+      
+    }
+    
+  }
+}
+test.block.has.value()
+
+
+test.pick.adjacent = function(){
+  cell.matrix = create.test.matrix()
+  
+  print(cell.matrix)
+  
+  point = pick.adjacent(cell.matrix, list('x'=4, 'y'=4), T)
+  print(paste("Point chosen: x:", point[['x']], "y:", point[['y']]))
+}
+# test.pick.adjacent()
+
+test.get.points = function(){
+  cell.matrix = create.test.matrix()
+  print(cell.matrix)
+  points = get.points(cell.matrix, F)
+  print(points)
+}
+
+test.get.points()
