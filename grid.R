@@ -76,6 +76,8 @@ pick.seed = function(m, value){
 # that has the given value
 # Returns a point
 pick.adjacent = function(m, point, value){
+  
+  # Wrap edges
   x = point[['x']]
   y = point[['y']]
   x.left  = ifelse(x==1, ncol(m), x-1)
@@ -83,6 +85,7 @@ pick.adjacent = function(m, point, value){
   y.below = ifelse(y==1, nrow(m), y-1)
   y.above = ifelse(y==nrow(m), 1, y+1)
   
+  # Find all valid points
   possible.points = c()
   
   if(m[y.above, x.left ]==value) possible.points = c(possible.points, x.left , y.above)
@@ -96,22 +99,10 @@ pick.adjacent = function(m, point, value){
   if(m[y.below, x      ]==value) possible.points = c(possible.points, x      , y.below)
   if(m[y.below, x.right]==value) possible.points = c(possible.points, x.right, y.below)
   
-  # print(str(possible.points))
+  # Choose a random point from those that are valid
   new.point = sample(1:length(possible.points)/2, size=1)*2
   
   return(list('x'=possible.points[new.point-1], 'y'=possible.points[new.point]))
-  
-  # Old function
-  # new.x = point[['x']]+sample(-1:1, size=1)
-  # new.y = point[['y']]+sample(-1:1, size=1)
-  
-  # Wrap around edges
-  # if(new.x>ncol(m)) new.x = 1
-  # if(new.x<1) new.x=ncol(m)
-  # if(new.y<1) new.y=nrow(m)
-  # if(new.y>nrow(m)) new.y = 1
-
-  # return(list("x" = new.x, "y"=new.y))
 }
 
 # Set a value in a matrix
@@ -164,8 +155,8 @@ make.aneuploids = function(cell.matrix, dispersion, n.cells){
     point = pick.seed(cell.matrix, cell.type)
 
     # Choose a random valid 8-connected point adjacent to the seed
-    new.point = pick.adjacent(cell.matrix, point, !cell.type) # mod
-    cell.matrix = set.value(cell.matrix, new.point, cell.type) # new
+    new.point = pick.adjacent(cell.matrix, point, !cell.type)
+    cell.matrix = set.value(cell.matrix, new.point, cell.type)
     n.remaining = n.remaining-1
   }
   
@@ -239,7 +230,7 @@ combs = expand.grid(props, disps)
 # Prepare result data frame
 result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
 
-iterations = 100 # number of simulations per parameter combination
+iterations = 500 # number of simulations per parameter combination
 
 for(i in 1:nrow(combs)){
   cat("Combination", i, "Disp:", combs$Var2[i], "Prop:", combs$Var1[i],"\n")
@@ -394,5 +385,4 @@ test.get.points = function(){
   points = get.points(cell.matrix, F)
   print(points)
 }
-
-test.get.points()
+# test.get.points()
