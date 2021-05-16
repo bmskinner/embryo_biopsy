@@ -29,19 +29,19 @@ block.has.value = function(m, x, y){
 # Get all points in the matrix with the given value
 # which are not completely surrounded by points with
 # the same value
-# Returns a data frame with x and y columns
+# Returns a vector with alternating x and y values
 get.points = function(m, value){
-  result = data.frame('x'=NA, 'y'=NA)
+  result = c()
   for(x in 1:ncol(m)){
     for(y in 1:nrow(m)){
       # We don't need to include in seeds values that are 
       # completely surrounded by points with the same value
       if(m[y, x]==value & !block.has.value(m, x, y)){
-        result = rbind(result, c('x'=x, 'y'=y))
+        result = c(result, x, y)
       }
     }
   }
-  return(na.omit(result))
+  return(result)
 }
 
 # Make a seed at a random location in a matrix
@@ -59,17 +59,10 @@ make.seed = function(m, value){
 # Returns a point
 pick.seed = function(m, value){
   all.seeds = get.points(m, value)
-  # print("All possible seeds:")
-  # print(all.seeds)
-  random.row = sample(1:nrow(all.seeds), size=1)
-  # print(paste("Row:", random.row))
-  x = all.seeds$x[random.row]
-  y = all.seeds$y[random.row]
-  
-  if(nrow(all.seeds)==0) print(m)
-  # cat("x", x, "y", y, "\n")
-  if(m[y, x]==value) return(list("x" = x, "y"=y))
-  return(pick.seed(m, value))
+  random.row = (sample(1:(length(all.seeds)/2), size=1))*2
+  x = all.seeds[random.row-1]
+  y = all.seeds[random.row]
+  return(list("x" = x, "y"=y))
 }
 
 # Pick an 8 connected point in a matrix
@@ -184,13 +177,7 @@ make.count = function(prop.aneuploids, dispersion, make.chart=F, dim.x=10, dim.y
   cells = matrix(T, nrow=dim.y, ncol=dim.x)
   
   result = make.aneuploids(cells, dispersion, n.aneuploids)
-  
-  data = as.data.frame(result)
-  data$y = row(data)
-  filt = tidyr::pivot_longer(data,cols=(-y), names_to="x", names_pattern="(\\d+)")
-  filt$x = as.integer(filt$x)
-  filt$y = filt$y[,1]
-  
+
   # Sample 5 cells from the centre
   x.centre = ceiling(dim.x/2)
   y.centre = ceiling(dim.y/2)
@@ -202,6 +189,13 @@ make.count = function(prop.aneuploids, dispersion, make.chart=F, dim.x=10, dim.y
   
   p=NULL
   if(make.chart){
+    # Turn the matrix into a data.frame for dplyr
+    data = as.data.frame(result)
+    data$y = row(data)
+    filt = tidyr::pivot_longer(data,cols=(-y), names_to="x", names_pattern="(\\d+)")
+    filt$x = as.integer(filt$x)
+    filt$y = filt$y[,1]
+    
     p = ggplot(filt, aes(x=x, y=y, col=value))+
       geom_point(size=6)+
       geom_segment(aes(x =x.centre-1.5 , y = y.centre+0.5, xend = x.centre+1.5, yend = y.centre+0.5), col="black", size=2)+
@@ -231,44 +225,45 @@ make.count = function(prop.aneuploids, dispersion, make.chart=F, dim.x=10, dim.y
 # Running the analysis
 ####################################
 
-# Make a grid of parameters
-props = seq(0.0, 1.0, 0.2)
-disps = seq(0.1, 1, 0.2) # dispersion - if 0, all one clump, if 1 all cells individual
-combs = expand.grid(props, disps)
-
-# Prepare result data frame
-result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
-
-iterations = 100 # number of simulations per parameter combination
-
-for(i in 1:nrow(combs)){
-  cat("Combination", i, "Disp:", combs$Var2[i], "Prop:", combs$Var1[i],"\n")
-  ptm <- proc.time()
-  counts.and.plots = lapply(1:iterations, make.count,
-                            prop.aneuploids=combs$Var1[i],
-                            dispersion=combs$Var2[i], make.chart=T, dim.x=10, dim.y=10)
-  time.taken = proc.time() - ptm
-  cat("Combination", i, "took ", time.taken[['elapsed']], "seconds\n")
-  # Extract counts and plots separately
-  counts = sapply(1:iterations, function(i) counts.and.plots[[i]][['n.euploid']])
-  plots  = lapply(1:iterations, function(i) counts.and.plots[[i]][['plot']])
-
-  temp = data.frame("prop"=rep(combs$Var1[i], iterations),
-                    "disp"=rep(combs$Var2[i], iterations),
-                    "e" = counts)
-  result = rbind(result, temp)
+runAnalysis = function(){
+  # Make a grid of parameters
+  props = seq(0.0, 1.0, 0.1)
+  disps = seq(0.1, 1, 0.1) # dispersion - if 0, all one clump, if 1 all cells individual
+  combs = expand.grid(props, disps)
+  
+  # Prepare result data frame
+  result = data.frame("prop"=NA, "disp"=NA, "e"=NA)
+  
+  iterations = 500 # number of simulations per parameter combination
+  
+  for(i in 1:nrow(combs)){
+    cat("Combination", i, "Disp:", combs$Var2[i], "Prop:", combs$Var1[i],"\n")
+    ptm <- proc.time()
+    counts.and.plots = lapply(1:iterations, make.count,
+                              prop.aneuploids=combs$Var1[i],
+                              dispersion=combs$Var2[i], make.chart=F, dim.x=10, dim.y=10)
+    time.taken = proc.time() - ptm
+    cat("Combination", i, "took ", time.taken[['elapsed']], "seconds\n")
+    # Extract counts and plots separately
+    counts = sapply(1:iterations, function(i) counts.and.plots[[i]][['n.euploid']])
+    plots  = lapply(1:iterations, function(i) counts.and.plots[[i]][['plot']])
+    
+    temp = data.frame("prop"=rep(combs$Var1[i], iterations),
+                      "disp"=rep(combs$Var2[i], iterations),
+                      "e" = counts)
+    result = rbind(result, temp)
+  }
+  
+  # Plot the results
+  result = na.omit(result)
+  ggplot(result, aes(x=e))+
+    geom_bar()+
+    facet_grid(prop~disp)+
+    labs(title=paste("Cols = dispersal (0=clumped, 1=dispersed), rows = proportion aneuploid cells"),
+         x="Number of euploid cells in 5 cell biopsy",
+         y="Simulations in which this occurred")
+  
 }
-
-# Plot the results
-result = na.omit(result)
-ggplot(result, aes(x=e))+
-  geom_bar()+
-  facet_grid(prop~disp)+
-  labs(title=paste("Cols = dispersal (0=clumped, 1=dispersed), rows = proportion aneuploid cells"),
-       x="Number of euploid cells in 5 cell biopsy",
-       y="Simulations in which this occurred")
-
-
 
 ####################################
 # TESTS
@@ -375,8 +370,7 @@ test.block.has.value = function(){
     
   }
 }
-test.block.has.value()
-
+# test.block.has.value()
 
 test.pick.adjacent = function(){
   cell.matrix = create.test.matrix()

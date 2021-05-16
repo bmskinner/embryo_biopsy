@@ -5,21 +5,28 @@ source("grid.R")
 
 # Define the server
 function(input, output, session){
+  
+  # Make a single grid plot
+  makeExampleGrid = reactive({
+    example = make.count(prop.aneuploids= input$proportion, 
+               dispersion = input$dispersal, 
+               make.chart=T,
+               dim.x = input$dim.x,
+               dim.y = input$dim.y)
+  })
+  
   calculateData = reactive({
-
+    # Make the rest without grids
     result = lapply(1:input$iterations, make.count, 
                               prop.aneuploids= input$proportion, 
                               dispersion = input$dispersal, 
-                              make.chart=T,
+                              make.chart=F,
                               dim.x = input$dim.x,
                               dim.y = input$dim.y)
-    
-    
-    
   })
   
   output$biopsyPlot = renderPlot({
-    calculateData()[[1]][['plot']]
+    makeExampleGrid()[['plot']]
   })
   
   output$iterationSummary = renderPlot({
