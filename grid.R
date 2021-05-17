@@ -167,7 +167,7 @@ make.aneuploids = function(cell.matrix, dispersion, n.cells){
     # that does not have the target cell type
     new.point = pick.adjacent(cell.matrix, point, !cell.type)
     
-    if(length(new.point)==0) cat("Point not found!\n")
+    # if(length(new.point)==0) cat("Point not found!\n")
     
     # Update the matrix
     cell.matrix[new.point[['y']], new.point[['x']]] = cell.type
