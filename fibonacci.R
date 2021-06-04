@@ -1,7 +1,7 @@
 # Fibonacci lattice model
-library(tidyverse)
-library(plotly)
-library(assertthat)
+# library(tidyverse)
+# library(plotly)
+# library(assertthat)
 
 # Create a sphere of evenly spaced points 
 create.blank.sphere = function(n.points){
@@ -52,8 +52,8 @@ create.blastocyst = function(n.cells, prop.aneuploid, dispersion){
     d$isSeed[seed] = T
     n.to.make = n.to.make-1L
   }
-  assertthat::assert_that(sum(d$isSeed)==n.seeds, 
-                          msg = paste("Expected", n.seeds, "seeds, found", sum(d$isSeed)))
+  # assertthat::assert_that(sum(d$isSeed)==n.seeds, 
+                          # msg = paste("Expected", n.seeds, "seeds, found", sum(d$isSeed)))
   # Grow the seeds into neighbouring cells
   n.expands = n.aneuploid - n.seeds
   n.to.make = n.expands
@@ -64,8 +64,8 @@ create.blastocyst = function(n.cells, prop.aneuploid, dispersion){
     d$isSeed[seed] = T
     n.to.make = n.to.make-1
   }
-  assertthat::assert_that(sum(d$isSeed)==n.aneuploid, 
-                          msg = paste("Expected", n.aneuploid, "aneuploids, found", sum(d$isSeed)))
+  # assertthat::assert_that(sum(d$isSeed)==n.aneuploid, 
+  #                         msg = paste("Expected", n.aneuploid, "aneuploids, found", sum(d$isSeed)))
   return(d)
 }
 
@@ -90,32 +90,45 @@ make.samples = function(d, n.cells.per.sample){
 }
 
 
-disps = seq(0, 1, 0.1)
-cells = seq(50, 200, 10)
-aneus = seq(0, 1, 0.1)
-conditions = expand.grid("disps"=disps, "aneuploids"=aneus)
+disps = seq(0, 1, 0.5)
+cells = seq(100, 200, 50)
+aneus = seq(0, 1, 0.5)
+samps = seq(2, 20, 2)
+conditions = expand.grid("disps"=disps, "aneuploids"=aneus, "cells"=cells, "samples"=samps)
 
 # Create a blastocyst with the given characteristics and sample it
-run.simulation = function(disp, aneuploid, cells){
-  cat("Simulating", disp, "dispersion,", aneuploid, "aneuploids\n")
-  d = create.blastocyst(n.cells=cells, prop.aneuploid = aneuploid, dispersion = disp)
-  sample.results = make.samples(d, n.cells.per.sample=5)
-  return(mean(sample.results))
+run.simulation = function(disp, aneuploid, cells, replicates, cells.per.sample){
+  cat("Simulating", disp, "dispersion,", cells, "cells,", aneuploid, "aneuploids,", cells.per.sample, "cells per sample\n")
+  
+  result = c()
+  for(r in 1:replicates){
+    d = create.blastocyst(n.cells=cells, prop.aneuploid = aneuploid, dispersion = disp)
+    result = c(result, make.samples(d, n.cells.per.sample=cells.per.sample))
+  }
+  return(mean(result))
 }
 
+set.seed(42)
+conditions$output = mapply(run.simulation, 
+                           disp=conditions$disps, 
+                           aneuploid=conditions$aneuploids, 
+                           cells=conditions$cells, 
+                           cells.per.sample=conditions$samples,
+                           replicates=100)
 
-conditions$output = mapply(run.simulation, conditions$disps, conditions$aneuploids, cells=200)
-ggplot(conditions, aes(x=disps, y=aneuploids, fill=output))+
-  geom_tile()+
-  scale_fill_viridis_c()
+write.table(conditions, file="conditions.tsv", col.names = T, row.names = F)
+
+# ggplot(conditions, aes(x=disps, y=aneuploids, fill=output))+
+#   geom_tile()+
+#   scale_fill_viridis_c()
 
 # Single sample
 # d = create.blastocyst(n.cells=200, prop.aneuploid = 0.1, dispersion = 0.3)
 # sample.results = make.samples(d, n.samples=2000, n.cells.per.sample=5)
 
 
-plot_ly(x=d$x, y=d$y, z=d$z, type="scatter3d",
-        mode="markers", 
-        color=d$isSeed, 
-        colors = c("#00FF00", "#FF0000"))
+# plot_ly(x=d$x, y=d$y, z=d$z, type="scatter3d",
+#         mode="markers", 
+#         color=d$isSeed, 
+#         colors = c("#00FF00", "#FF0000"))
 
