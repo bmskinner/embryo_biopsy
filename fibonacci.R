@@ -90,11 +90,11 @@ make.samples = function(d, n.cells.per.sample){
 }
 
 
-disps = seq(0, 1, 0.5)
-cells = seq(100, 200, 50)
-aneus = seq(0, 1, 0.5)
-samps = seq(2, 20, 2)
-conditions = expand.grid("disps"=disps, "aneuploids"=aneus, "cells"=cells, "samples"=samps)
+# disps = seq(0, 1, 0.5)
+# cells = seq(100, 200, 50)
+# aneus = seq(0, 1, 0.5)
+# samps = seq(2, 20, 2)
+# conditions = expand.grid("disps"=disps, "aneuploids"=aneus, "cells"=cells, "samples"=samps)
 
 # Create a blastocyst with the given characteristics and sample it
 run.simulation = function(disp, aneuploid, cells, replicates, cells.per.sample){
@@ -108,15 +108,15 @@ run.simulation = function(disp, aneuploid, cells, replicates, cells.per.sample){
   return(mean(result))
 }
 
-set.seed(42)
-conditions$output = mapply(run.simulation, 
-                           disp=conditions$disps, 
-                           aneuploid=conditions$aneuploids, 
-                           cells=conditions$cells, 
-                           cells.per.sample=conditions$samples,
-                           replicates=100)
+# set.seed(42)
+# conditions$output = mapply(run.simulation, 
+#                            disp=conditions$disps, 
+#                            aneuploid=conditions$aneuploids, 
+#                            cells=conditions$cells, 
+#                            cells.per.sample=conditions$samples,
+#                            replicates=100)
 
-write.table(conditions, file="conditions.tsv", col.names = T, row.names = F)
+# write.table(conditions, file="conditions.tsv", col.names = T, row.names = F)
 
 # ggplot(conditions, aes(x=disps, y=aneuploids, fill=output))+
 #   geom_tile()+
