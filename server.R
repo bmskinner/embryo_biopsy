@@ -2,7 +2,6 @@
 library(shiny)
 library(shinythemes)
 library(plotly)
-library(rgl)
 source("fibonacci.R")
 
 # Define the server
@@ -17,7 +16,8 @@ function(input, output, session){
   
   output$biopsyPlot = renderPlotly({
     d = calculateData()
-    plot_ly(x=d$x, y=d$y, z=d$z, type="scatter3d",
+    plot_ly(x=d$x, y=d$y, z=d$z, 
+            type="scatter3d",
             mode="markers",
             color=d$isSeed,
             colors = c("#00FF00", "#FF0000")) %>% layout(showlegend = FALSE)

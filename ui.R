@@ -1,18 +1,20 @@
 # Control the UI
 library(shiny)
 library(shinythemes)
+library(plotly)
 
 # Define the UI
 fluidPage(theme = shinytheme("lumen"),
             titlePanel("Aneuploidies seen in biopsies"),
             sidebarLayout(
               sidebarPanel(
-                numericInput(inputId = "dispersal",
-                             label = strong("Dispersal of aneuploid cells (0-1)"),
-                             value = 0.1,
-                             min=0,
-                             max = 1,
-                             step = 0.05),
+                
+                numericInput(inputId = "n.cells",
+                             label = strong("Total cells"),
+                             value = 100,
+                             min=10,
+                             max = 300,
+                             step = 1),
                 
                 numericInput(inputId = "proportion",
                              label = strong("Proportion of aneuploid cells (0-1)"),
@@ -21,12 +23,12 @@ fluidPage(theme = shinytheme("lumen"),
                              max = 1,
                              step = 0.05),
                 
-                numericInput(inputId = "n.cells",
-                             label = strong("Number of cells"),
-                             value = 100,
-                             min=10,
-                             max = 300,
-                             step = 1),
+                numericInput(inputId = "dispersal",
+                             label = strong("Dispersal of aneuploid cells (0-1)"),
+                             value = 0.1,
+                             min=0,
+                             max = 1,
+                             step = 0.05),
                 
                 numericInput(inputId = "n.samples",
                              label = strong("Cells per sample"),
@@ -43,7 +45,7 @@ fluidPage(theme = shinytheme("lumen"),
                            cells in the data, as well as their dispersal (low dispersal means they
                            are found mostly in clumps, high dispersal means individual cells are more
                            likely). The blastocyst generated will be shown below, and a histogram 
-                  showing the frequency at which aneuploid cells are found in random biopsies"),
+                  showing the frequency at which aneuploid cells are found in random biopsies."),
                 
                 plotlyOutput("biopsyPlot",  width = 500, height = 500),
                 plotOutput(outputId = "iterationSummary", height = "300px")
