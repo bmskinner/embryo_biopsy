@@ -12,7 +12,7 @@ conditions = expand.grid("disps"     = seq(0, 1, 0.05),
 # Create a blastocyst with the given characteristics and sample it
 run.simulation = function(disp, aneuploid, cells, replicate, cells.per.sample, index, total){
   if(index%%20000==0){
-    cat(format(Sys.time(), "%Y-%m-%d %X"), ": Simulation",index, "of", total, "(", format(index/total, nsmall=1, digits = 3), "%)\n")
+    cat(format(Sys.time(), "%Y-%m-%d %X"), ": Simulation",index, "of", total, "(", format(index/total*100, nsmall=1, digits = 3), "%)\n")
   }
 
   d = create.blastocyst(n.cells=cells, prop.aneuploid = aneuploid, dispersion = disp)
@@ -23,7 +23,7 @@ run.simulation = function(disp, aneuploid, cells, replicate, cells.per.sample, i
 n.cores = ifelse(Sys.info()["sysname"]=="Windows", 1, 60) # parallel only works on Unix-like
 set.seed(42)
 
-cat(format(Sys.time(), "%Y-%m-%d %X"), ": Running ", nrow(conditions), "simulations on ", n.cores, "cores\n")
+cat(format(Sys.time(), "%Y-%m-%d %X"), ": Running", nrow(conditions), "simulations on", n.cores, "cores\n")
 conditions$output = mcmapply(run.simulation,
                            disp            = conditions$disps,
                            aneuploid       = conditions$aneuploids,
