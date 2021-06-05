@@ -36,7 +36,7 @@ function(input, output, session){
     hist(result, xlim=c(-0.5,input$n.samples+0.5),
          breaks=seq(-0.5, input$n.samples+0.5, 1),
          xlab = "Number of aneuploid cells in biopsy",
-         main = paste("Sampling",input$n.samples, 
+         main = paste("Biopsying",input$n.samples, 
                       "cells from this blastocyst \nwould give only euploid cells in", 
                       format(ratio, nsmall=1, digits = 3), "% of biopsies"))
   })

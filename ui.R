@@ -31,7 +31,7 @@ fluidPage(theme = shinytheme("lumen"),
                              step = 0.05),
                 
                 numericInput(inputId = "n.samples",
-                             label = strong("Cells per sample"),
+                             label = strong("Cells per biopsy"),
                              value = 5,
                              min= 1,
                              max = 20,
