@@ -4,6 +4,7 @@
 # library(assertthat)
 
 # Create a sphere of evenly spaced points 
+# n.points - the number of points to create
 create.blank.sphere = function(n.points){
   # Make a sphere of evenly spaced points using the Fibonacci spiral
   indices = seq(0, n.points-1, 1)+0.5
@@ -31,11 +32,19 @@ create.blank.sphere = function(n.points){
 }
 
 # Test if any of the neighbouring cells have an aneuploidy
+# d - the blastocyst
+# index - the cell to test
+# Returns true if any of the closest cells are aneuploid
 has.adjacent.aneuploid = function(d, index){
   adj.list = d[[paste0("isNeighbour", index)]]
   return(any(adj.list & d$isSeed))
 }
 
+# Make a blastocyst matrix
+# n.cells - the number of cells in the blastocyst
+# prop.aneuploid - the proportion of aneuploid cells (0-1)
+# dispersion - the dispersion of the aneuploid cells (0-1)
+# Returns a blastocyst matrix
 create.blastocyst = function(n.cells, prop.aneuploid, dispersion){
 
   d = create.blank.sphere(n.cells)
@@ -71,7 +80,11 @@ create.blastocyst = function(n.cells, prop.aneuploid, dispersion){
   return(d)
 }
 
-# Take a sample from a given blastocyst of the given index
+# Take a sample from a blastocyst. The cell at the given index is taken, 
+# plus the closest n neighbouring cells where n = n.sampled.cells-1.
+# d - the blastocyst matrix
+# n.sampled.cells - the number of cells to biopsy
+# seed.sample - the index of the cell to begin biopsying
 sample.blastocyst = function(d, n.sampled.cells, seed.sample){
   
   sample.list = d[[paste0("d", seed.sample)]]
@@ -80,8 +93,10 @@ sample.blastocyst = function(d, n.sampled.cells, seed.sample){
   return(d)
 }
 
-# Find the number of aneuploid cells found in a sample of 
+# Find the number of aneuploid cells in all biopsies of 
 # a given size for the given blastocyst
+# d - the blastocyst matrix
+# n.cells.per.sample - the number of cells to take in each biopsy
 make.samples = function(d, n.cells.per.sample){
   result = c()
   for(i in 1:nrow(d)){ # sample each cell in turn, so we get every cell

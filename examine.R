@@ -1,4 +1,5 @@
 # examine output data
+library(tidyverse)
 
 data = read_tsv("conditions.tsv")
 filt = data %>% dplyr::rowwise() %>%
@@ -15,4 +16,10 @@ filt = data %>% dplyr::rowwise() %>%
 ggplot(filt, aes(x=samples, y=aneuploids, fill=MeanEuploid))+
   geom_tile()+
   scale_fill_viridis_c()+
+  facet_grid(disps~cells)
+
+
+ggplot(filt, aes(x=aneuploids, y=MeanEuploid, col=samples, group=aneuploids))+
+  geom_point()+
+  geom_line()+
   facet_grid(disps~cells)
