@@ -40,7 +40,7 @@ fluidPage(theme = shinytheme("lumen"),
                 
               ),
               mainPanel(
-                p("The grid below contains euploid (green) and aneuploid (red) cells.
+                p("The blastocyst below contains euploid (green) and aneuploid (red) cells.
                            Use the settings on the left to adjust the proportion of aneuploid
                            cells in the data, as well as their dispersal (low dispersal means they
                            are found mostly in clumps, high dispersal means individual cells are more
