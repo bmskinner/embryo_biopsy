@@ -1,6 +1,9 @@
 # Fibonacci lattice model
 # library(assertthat)
 
+# The number of cells to be considered neighbours to a given cell
+N_NEIGHBOURS=6
+
 # Create a sphere of evenly spaced points 
 # n.points - the number of points to create
 create.blank.sphere = function(n.points){
@@ -15,13 +18,12 @@ create.blank.sphere = function(n.points){
   d = as.data.frame(cbind(x, y, z))
   
   # Create distance matrix for each point
-  # Set the 6 closest points to be neighbours
+  # Set the N_NEIGHBOURS closest points to be neighbours
   for(i in 1:nrow(d)){
-    # current row
     dist = sqrt( (d$x-x[i])**2 + (d$y-y[i])**2 + (d$z-z[i])**2) # distance between points
-    d[[paste0("d", i)]] = dist
-    # calculate distance from this row to current row
-    d[[paste0("isNeighbour", i)]] = dist > 0 & dist <= max(head(sort(dist), n=7))
+    d[[paste0("d", i)]] = dist # create a column to store the distances
+    # A point is a neighbour if it is not this point, and it is in the list of closest points
+    d[[paste0("isNeighbour", i)]] = dist > 0 & dist <= max(head(sort(dist), n=N_NEIGHBOURS+1))
   }
   d$isSeed = FALSE
   
@@ -78,15 +80,21 @@ create.blastocyst = function(n.cells, prop.aneuploid, dispersion){
   n.seeds = ceiling(max(1, n.aneuploid * dispersion))
   n.to.make = n.seeds
   
+  # We can disperse up to a certain number of initial blocks with
+  # no aneuploid neighbours. After this, every cell will have at least
+  # one aneuploid neighbour. We stop a bit before this to make the maths simpler.
+  initial.blocks = max(1,floor(n.cells/N_NEIGHBOURS))
+
   # Disperse seeds as much as possible
-  while(count.empty.blocks(d)>0 & n.to.make>0){
+  while(initial.blocks>0 & n.to.make>0){
     seed = sample.int(n.cells, 1)
     if(d$isSeed[seed]) next
     if(has.adjacent.aneuploid(d, seed)) next # spread seeds out
     d$isSeed[seed] = T
     n.to.make = n.to.make-1L
+    initial.blocks = initial.blocks-1L
   }
-
+  
   # When all dispersed seeds have been added, add the remaining seeds randomly
   while(n.to.make>0){
     seed = sample.int(n.cells, 1)
