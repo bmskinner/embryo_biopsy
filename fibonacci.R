@@ -1,6 +1,4 @@
 # Fibonacci lattice model
-# library(tidyverse)
-# library(plotly)
 # library(assertthat)
 
 # Create a sphere of evenly spaced points 
@@ -40,6 +38,18 @@ has.adjacent.aneuploid = function(d, index){
   return(any(adj.list & d$isSeed))
 }
 
+# Count the number of potential seed locations
+# (cells that are not adjacent to a seed)
+# d - the blastocyst matrix
+# Returns the number of potential seeds
+count.empty.blocks = function(d){
+  n = 0
+  for(i in 1:nrow(d)){
+    if(!d$isSeed[i] & !has.adjacent.aneuploid(d, i)) n = n+1
+  }
+  return(n)
+}
+
 # Make a blastocyst matrix
 # n.cells - the number of cells in the blastocyst
 # prop.aneuploid - the proportion of aneuploid cells (0-1)
@@ -49,29 +59,50 @@ create.blastocyst = function(n.cells, prop.aneuploid, dispersion){
 
   d = create.blank.sphere(n.cells)
   
+  # Shortcut the easy cases
   if(prop.aneuploid==0) return(d)
   
+  if(prop.aneuploid==1){
+    d$isSeed=T
+    return(d)
+  } 
+  
+  # We must have an integer value of at least one aneuploid cell
   n.aneuploid = ceiling(max(1, n.cells * prop.aneuploid))
   
-  # Create seeds for aneuploid regions
+  # The approach for dispersal is to set seed cells which will 
+  # grow into separate aneuploid patches. The more dispersion, the more
+  # initial seeds.
+  
+  # Choose number of seeds for aneuploid regions
   n.seeds = ceiling(max(1, n.aneuploid * dispersion))
   n.to.make = n.seeds
+  
+  # Disperse seeds as much as possible
+  while(count.empty.blocks(d)>0 & n.to.make>0){
+    seed = sample.int(n.cells, 1)
+    if(d$isSeed[seed]) next
+    if(has.adjacent.aneuploid(d, seed)) next # spread seeds out
+    d$isSeed[seed] = T
+    n.to.make = n.to.make-1L
+  }
+
+  # When all dispersed seeds have been added, add the remaining seeds randomly
   while(n.to.make>0){
     seed = sample.int(n.cells, 1)
     if(d$isSeed[seed]) next
-    # if(has.adjacent.aneuploid(d, seed)) next # spread seeds out (fails when all cells have at least one neighbour)
     d$isSeed[seed] = T
     n.to.make = n.to.make-1L
   }
   # assertthat::assert_that(sum(d$isSeed)==n.seeds, 
                           # msg = paste("Expected", n.seeds, "seeds, found", sum(d$isSeed)))
-  # Grow the seeds into neighbouring cells
-  n.expands = n.aneuploid - n.seeds
-  n.to.make = n.expands
+  
+  # Grow the seeds into neighbouring cells for remaining aneuploid cells
+  n.to.make = n.aneuploid - n.seeds
   while(n.to.make>0){
     seed = sample.int(n.cells, 1)
     if(d$isSeed[seed]) next # skip cells already aneuploid
-    if(!has.adjacent.aneuploid(d, seed)) next # only grow into areas with an existing aneuploidy
+    if(!has.adjacent.aneuploid(d, seed)) next # only grow next to existing aneuploid
     d$isSeed[seed] = T
     n.to.make = n.to.make-1
   }
