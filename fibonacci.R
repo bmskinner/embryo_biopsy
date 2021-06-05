@@ -6,7 +6,7 @@
 # Create a sphere of evenly spaced points 
 create.blank.sphere = function(n.points){
   # Make a sphere of evenly spaced points using the Fibonacci spiral
-  indices = seq(0, n.points, 1)+0.5
+  indices = seq(0, n.points-1, 1)+0.5
   phi = acos(pmin(pmax( 1-2*indices/n.points,-1.0),1.0)) # constrain to avoid rounding errors
   theta = pi * (1 + sqrt(5)) * indices
   
@@ -25,6 +25,8 @@ create.blank.sphere = function(n.points){
     d[[paste0("isNeighbour", i)]] = dist > 0 & dist <= max(head(sort(dist), n=7))
   }
   d$isSeed = FALSE
+  
+  # assertthat::assert_that(nrow(d)==n.points, msg=paste("Expected", n.points, "cells, found", nrow(d)))
   return(d)
 }
 
@@ -89,46 +91,4 @@ make.samples = function(d, n.cells.per.sample){
   return(result)
 }
 
-
-# disps = seq(0, 1, 0.5)
-# cells = seq(100, 200, 50)
-# aneus = seq(0, 1, 0.5)
-# samps = seq(2, 20, 2)
-# conditions = expand.grid("disps"=disps, "aneuploids"=aneus, "cells"=cells, "samples"=samps)
-
-# Create a blastocyst with the given characteristics and sample it
-run.simulation = function(disp, aneuploid, cells, replicates, cells.per.sample){
-  cat("Simulating", disp, "dispersion,", cells, "cells,", aneuploid, "aneuploids,", cells.per.sample, "cells per sample\n")
-  
-  result = c()
-  for(r in 1:replicates){
-    d = create.blastocyst(n.cells=cells, prop.aneuploid = aneuploid, dispersion = disp)
-    result = c(result, make.samples(d, n.cells.per.sample=cells.per.sample))
-  }
-  return(mean(result))
-}
-
-# set.seed(42)
-# conditions$output = mapply(run.simulation, 
-#                            disp=conditions$disps, 
-#                            aneuploid=conditions$aneuploids, 
-#                            cells=conditions$cells, 
-#                            cells.per.sample=conditions$samples,
-#                            replicates=100)
-
-# write.table(conditions, file="conditions.tsv", col.names = T, row.names = F)
-
-# ggplot(conditions, aes(x=disps, y=aneuploids, fill=output))+
-#   geom_tile()+
-#   scale_fill_viridis_c()
-
-# Single sample
-# d = create.blastocyst(n.cells=200, prop.aneuploid = 0.1, dispersion = 0.3)
-# sample.results = make.samples(d, n.samples=2000, n.cells.per.sample=5)
-
-
-# plot_ly(x=d$x, y=d$y, z=d$z, type="scatter3d",
-#         mode="markers", 
-#         color=d$isSeed, 
-#         colors = c("#00FF00", "#FF0000"))
 
