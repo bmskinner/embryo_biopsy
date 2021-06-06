@@ -27,7 +27,7 @@ function(input, output, session){
 
     d = calculateData()
     result = make.samples(d, input$n.samples)
-    
+
     n.euploids = length(result[result==0])
     n.aneuploids  = length(result) - n.euploids
     ratio = (n.euploids / length(result))*100
@@ -36,9 +36,15 @@ function(input, output, session){
     hist(result, xlim=c(-0.5,input$n.samples+0.5),
          breaks=seq(-0.5, input$n.samples+0.5, 1),
          xlab = "Number of aneuploid cells in biopsy",
+         ylab = "Fraction of biopsies",
+         col = c("green", rep("red", input$n.samples)),
+         xaxt="n",
+         ylim = c(0,1),
+         freq=F,
          main = paste("Biopsying",input$n.samples, 
                       "cells from this blastocyst \nwould give only euploid cells in", 
                       format(ratio, nsmall=1, digits = 3), "% of biopsies"))
+    axis(1, at = seq(0, input$n.samples, 1))
   })
 
 
