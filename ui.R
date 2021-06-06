@@ -46,8 +46,9 @@ fluidPage(theme = shinytheme("lumen"),
                            are found mostly in clumps, high dispersal means individual cells are more
                            likely). The blastocyst generated will be shown below, and a histogram 
                   showing the frequency at which aneuploid cells are found in random biopsies."),
+                p(""),
                 
-                plotlyOutput("biopsyPlot",  width = 500, height = 500),
+                plotlyOutput("biopsyPlot",  width = 500, height = 400),
                 plotOutput(outputId = "iterationSummary", height = "300px")
               ))
 )
