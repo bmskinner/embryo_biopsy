@@ -47,9 +47,6 @@ function(input, output, session){
          freq=F,
          main = paste("Biopsying",input$n.samples,
                       "cells from this blastocyst"))
-         #              format(euploid.ratio, nsmall=1, digits = 3), "% only euploid biopsies,",
-         #              format(mosaic.ratio, nsmall=1, digits = 3), "% mosaic biopsies and\n",
-         #              format(aneuploid.ratio, nsmall=1, digits = 3), "% only aneuploid biopsies"))
     axis(1, at = seq(0, input$n.samples, 1))
     text( paste0(format(euploid.ratio, nsmall=1, digits = 3),"%\neuploid"), x=0, y=0.9)
     text( paste0(format(mosaic.ratio, nsmall=1, digits = 3),"%\nmosaic"), x=input$n.samples/2, y=0.9)
