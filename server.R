@@ -48,9 +48,9 @@ function(input, output, session){
          main = paste("Biopsying",input$n.samples,
                       "cells from this blastocyst"))
     axis(1, at = seq(0, input$n.samples, 1))
-    text( paste0(format(euploid.ratio, nsmall=1, digits = 3),"%\neuploid"), x=0, y=0.9)
+    text( paste0(format(euploid.ratio, nsmall=1, digits = 3),"%\nall euploid"), x=0, y=0.9)
     text( paste0(format(mosaic.ratio, nsmall=1, digits = 3),"%\nmosaic"), x=input$n.samples/2, y=0.9)
-    text( paste0(format(aneuploid.ratio, nsmall=1, digits = 3),"%\naneuploid"), x=input$n.samples, y=0.9)
+    text( paste0(format(aneuploid.ratio, nsmall=1, digits = 3),"%\nall aneuploid"), x=input$n.samples, y=0.9)
     if(mosaic.ratio>0) segments(1, 0.7, input$n.samples-1, 0.7)
   })
 
