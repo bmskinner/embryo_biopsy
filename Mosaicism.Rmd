@@ -1,0 +1,555 @@
+---
+title: "Embryo Mosaicism"
+output: 
+  html_document:
+    number_sections: true
+    toc_float: true
+    toc_collapsed: false
+    toc_levels: 4
+    toc: true
+    theme: united
+    highlight: tango  # specifies the syntax highlighting style
+---
+
+```{r setup, include=FALSE, warning=FALSE, echo=F, message=F}
+knitr::opts_chunk$set(echo = TRUE)
+library(tessera)
+library(plotly)
+library(ggplot2)
+library(animation)
+library(parallel)
+
+biopsy.delta = 19 # plus or minus aneuploidy percent
+n.replicate.seeds = 50
+n.cores = ifelse(Sys.info()["sysname"]=="Windows", 1, 20) # parallel only works on Unix-like
+```
+
+
+```{r, echo=F, warning=F, message=F, warning=F}
+
+# Define functions
+
+plot.embryo = function(e){
+  # just show the state of the chromosome of interest
+colours = factor(as.integer(bitwAnd(e$isAneuploid,1)),
+                 levels = c(0, 1))
+
+plot_ly(x=e$x, y=e$y, z=e$z,
+            type="scatter3d",
+            mode="markers",
+            color=colours,
+            colors = c("#00FF00", "#FF0000"),
+            hoverinfo="none") %>%
+      layout( legend = list(y = 0.8,
+                          yanchor="top") ) %>%
+      colorbar(y = 0.8, yanchor="top", limits = c(0, 23)) %>%
+      add_annotations( text="Number of\naneuploid\nchromosomes\nin cell",
+                       xref="paper", yref="paper",
+                       x=0.95, xanchor="left",
+                       y=1.0, yanchor="top",
+                       legendtitle=TRUE, showarrow=FALSE ) %>%
+      add_annotations( text="Click and drag to rotate the chart",
+                       xref="paper", yref="paper",
+                       x=0.0, xanchor="left",
+                       y=1.0, yanchor="top",
+                       legendtitle=TRUE, showarrow=FALSE ) %>%
+      config(displayModeBar = FALSE)
+}
+
+# Plot the biopsy results
+plot.biopsy.aneuploidy = function(n.biopsy.aneuploid, biopsy.size, pct.embryo.aneuploid){
+  pct.biopsy.aneuploid = n.biopsy.aneuploid / biopsy.size * 100
+  biopsy.data = as.data.frame(pct.biopsy.aneuploid) %>%
+    dplyr::group_by(pct.biopsy.aneuploid) %>%
+    dplyr::summarise(n = dplyr::n()) %>%
+    dplyr::mutate(PctBiopsies = n/sum(n)*100)
+  
+  # Number of biopsies
+  ggplot(biopsy.data, aes(x=pct.biopsy.aneuploid, y = PctBiopsies)) +
+    geom_col(width = 1) +
+    coord_cartesian(xlim = c(0, 100)) +
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100)) +
+    scale_y_continuous(breaks = seq(0, 100, 10)) + 
+    labs(x = "Percent aneuploid cells in biopsy",
+         y = "Percent of biopsies from this embryo") +
+    theme_classic()
+}
+
+# Calculate the percentage of biopsies within the accuracy window, greater or
+# less. Window size is given by biopsy.delta
+calc.rates = function(n.biopsy.aneuploid, biopsy.size, pct.embryo.aneuploid){
+  pct.biopsy.aneuploid = n.biopsy.aneuploid / biopsy.size * 100
+  equal.rate = sum(  pct.biopsy.aneuploid>pct.embryo.aneuploid-biopsy.delta &
+                       pct.biopsy.aneuploid<pct.embryo.aneuploid+biopsy.delta)/length(pct.biopsy.aneuploid)*100
+  lower.rate = sum(pct.biopsy.aneuploid<=pct.embryo.aneuploid-biopsy.delta)/length(pct.biopsy.aneuploid)*100
+  higher.rate = sum(pct.biopsy.aneuploid>=pct.embryo.aneuploid+biopsy.delta)/length(pct.biopsy.aneuploid)*100
+  list("equal" = equal.rate, "lower" = lower.rate, "higher" = higher.rate)
+}
+
+# A weighted measure that considers how far each biopsy is from the true value
+calculate.difference = function(n.biopsy.aneuploid, biopsy.size, pct.embryo.aneuploid){
+  pct.biopsy.aneuploid = n.biopsy.aneuploid / biopsy.size * 100
+  # max.diff = 100 # worst result possible
+  # calculate sum of squares and normalise to number of biopsies
+  # sum.diffs = sum((pct.biopsy.aneuploid-pct.embryo.aneuploid)**2)
+  # sum.diffs/length(pct.biopsy.aneuploid)
+  vals = abs(pct.biopsy.aneuploid-pct.embryo.aneuploid)
+  list("mean" = mean(vals), "sd" = sd(vals), "values" = vals)
+}
+
+```
+
+# Introduction
+
+Determine the expected output from Tessera simulations
+
+1. What are the limits of what biopsies can tell you?
+
+A biopsy may not be informative if embryos can be mosaic. 
+
+2. What are the impacts of changing the distribution of aneuploid cells within the embryo?
+
+If some cells are tightly clumped, and others are more dispersed, how is the biopsy outcome affected?
+
+3. What is the impact of changing the biopsy to take a variable number of cells (i.e. + or - n around the desired number. Does the outcome differ from the fixed sample size?
+
+
+# Changing the embryo
+
+## The dispersal of aneuploid cells affects the relevance of a biopsy result
+
+We start by creating a single embryo, with a 20% aneuploidy rate, and high dispersal of aneuploid cells:
+
+```{r, echo=F, warning=F}
+e = tessera::create.embryo(n.cells = 200, 
+                           prop.aneuploids = 0.2, 
+                           dispersions = 1, 
+                           concordance = 1, seed = 42)
+
+plot.embryo(e)
+
+```
+
+Now to explore the possible biopsies. We can now take 5-cell biopsies from this embryo, starting at each cell in turn, to see the range of possible biopsies we can obtain.
+
+```{r, echo=F, fig.cap="Percentage of aneuploid cells in each biopsy"}
+
+b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+
+plot.biopsy.aneuploidy(b, 5, 20)
+rates = calc.rates(b, 5, 20)
+acc = calculate.difference(b, 5, 20)
+```
+
+We see that around half of the biopsies have the same 20% aneuploidy rate as the embryo. In this case, with a 5-cell biopsy, a single aneuploid cell within the biopsy gives us a perfect match to the embryo aneuploidy rate. This may not be the case if the aneuploidy rate changes.
+
+We need a measure that can capture the overall accuracy of the biopsy. This can be calculated from the difference between each biopsy and the true aneuploidy rate. We take the mean difference between the percentage aneuploidy for each biopsy and the embryo. This measure yields an mean difference of `r acc[["mean"]]` percent for the embryo above, with a standard deviation of `r acc[["sd"]]`%.
+
+Now contrast this with an embryo that has the same aneuploidy rate, but with tighter clustering of the aneuploid cells:
+
+```{r, echo=F, warning=F, fig.cap="Embryo with highly clustered aneuploid cells"}
+e = tessera::create.embryo(n.cells = 200, 
+                           prop.aneuploids = 0.2, 
+                           dispersions = 0, 
+                           concordance = 1, seed = 42)
+
+plot.embryo(e)
+
+```
+
+The aneuploid cells are in a discrete patch in the embryo, and the distribution of biopsies changes:
+
+```{r, echo=F, fig.cap="Percentage of aneuploid cells in each biopsy"}
+
+b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+
+plot.biopsy.aneuploidy(b, 5, 0.2)
+
+rates = calc.rates(b, 5, 20)
+acc = calculate.difference(b, 5, 20)
+```
+
+The accuracy score for this embryo is `r acc[["mean"]]`, with a standard deviation of `r acc[["sd"]]`%. How does accuracy vary as we change the parameters of the embryo or biopsy?
+
+
+```{r, echo=F, warning=F, message=F, cache=T, fig.cap="Accuracy is lowest when half the embryo is aneuploid"}
+make.aneuploidy.plot = function(aneuploidy){
+  e = tessera::create.embryo(n.cells = 200, 
+                             prop.aneuploids = aneuploidy, 
+                             dispersions = 0, 
+                             concordance = 1, seed = 42)
+  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  acc = calculate.difference(b, 5, aneuploidy*100)
+  p  = plot.biopsy.aneuploidy(b, 5, aneuploidy*100)
+  p + geom_vline(xintercept = aneuploidy*100) + 
+    geom_text(x=75, y=95, label=paste(aneuploidy*100, "% aneuploid cells:\n", 
+                                      sprintf(acc[["mean"]], fmt = '%#.2f'), 
+                                      "mean percent difference\nSD:", 
+                                      sprintf(acc[["sd"]], fmt = '%#.2f'), "%")) +
+    coord_cartesian(xlim = c(0, 100), ylim = c(0, 100))
+  
+}
+
+invisible(animation::saveGIF(
+  expr = {
+    for(i in seq(0, 1, 0.05)) plot(make.aneuploidy.plot(i))
+
+  },
+  ani.width = 720, ani.height = 480,
+  movie.name = "Aneuploidy.gif"
+))
+knitr::include_graphics("Aneuploidy.gif")
+```
+
+## The accuracy of the biopsy varies with the dispersal of aneuploid cells
+
+The accuracy varies with dispersal as follows:
+
+```{r, echo=F, warning=F, message=F, cache=T}
+make.dispersal.plot = function(dispersal){
+  e = tessera::create.embryo(n.cells = 200, 
+                           prop.aneuploids = 0.2, 
+                           dispersions = dispersal, 
+                           concordance = 1, seed = 42)
+  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  acc = calculate.difference(b, 5, 20)
+  p  = plot.biopsy.aneuploidy(b, 5, 20)
+  p + geom_vline(xintercept = 20) + 
+    geom_text(x=75, y=95, label=paste(dispersal*100, "% dispersal of cells:\n", 
+                                        sprintf(acc[["mean"]], fmt = '%#.2f'), 
+                                      "mean percent difference\nSD:", 
+                                      sprintf(acc[["sd"]], fmt = '%#.2f'), "%")) +
+    coord_cartesian(xlim = c(0, 100), ylim = c(0, 100))
+  
+}
+
+invisible(animation::saveGIF(
+  expr = {
+    for(i in seq(0, 1, 0.05)) plot(make.dispersal.plot(i))
+  },
+  ani.width = 720, ani.height = 480,
+  movie.name = "Dispersal.gif"
+))
+knitr::include_graphics("Dispersal.gif")
+```
+
+We see that changing the dispersal of the aneuploid cells also impacts the biopsies we will get, even if the total number of aneuploid cells remains constant. When aneuploid cells are highly clustered, the difference is about 25%, dropping to about 10% when cells are dispersed. 
+
+```{r, echo=FALSE, cache=T, fig.cap="Lower dispersal of cells reduces biopsy accuracy"}
+dispersals = seq(0, 1, 0.05)
+result = do.call(rbind, mclapply(dispersals, function(dispersal){
+  
+  e = tessera::create.embryo(n.cells = 200, 
+                             prop.aneuploids = 0.2, 
+                             dispersions = dispersal, 
+                             concordance = 1, seed = 44)
+  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  acc = calculate.difference(b, 5, 20)
+  
+  cbind(dispersal = rep(dispersal, length(acc[["values"]])), 
+        accuracy = acc[["values"]])
+}, mc.cores = n.cores))
+
+all.vals = expand.grid("dispersal" = dispersals,
+                       "accuracy" = c(sort(unique(round(result[,2]))), 100),
+                       "Count" = 0)
+
+data = as.data.frame(result) %>% 
+  dplyr::group_by(dispersal, accuracy) %>%
+  dplyr::summarise(Count = dplyr::n()) %>%
+  rbind(., all.vals) %>%
+  dplyr::group_by(dispersal, accuracy) %>%
+  dplyr::summarise(Count = sum(Count)) %>%
+  dplyr::mutate(Pct = Count/200*100) %>%
+  dplyr::arrange(dispersal, accuracy) %>%
+  dplyr::group_by(dispersal) %>%
+  dplyr::mutate(CumPct = cumsum(Pct))
+
+
+ggplot(data, aes(x = accuracy, y = CumPct, group = dispersal, col = dispersal)) + 
+  # geom_line() +
+  geom_step(size = 2) +
+    labs(y = "Percentage of biopsies",
+       x = "Percent difference between biopsy and embryo",
+       col = "Dispersal") + 
+  scale_color_viridis_c() + 
+  coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
+  scale_x_continuous(breaks = seq(0, 100, 10)) +
+  scale_y_continuous(breaks = seq(0, 100, 5)) +
+  theme_classic()
+```
+
+Consequently, with an aneuploidy rate of 20% in the embryo, a biopsy reaches on average within 10% of the true aneuploidy at best. Notably, this accuracy would only be found with repeated biopsying of the same embryo, which cannot happen in reality.
+
+## Accuracy of a biopsy also depends on the rate of aneuploidy in the embryo
+
+We can also vary the proportion of aneuploid cells with the embryo, holding the dispersal constant (and dispersing the aneuploid cells widely for best accuracy of the biopsies).
+
+```{r, echo=FALSE, cache=T, fig.cap="Embryos with high dispersal of aneuploid cells"}
+
+aneuploidies = seq(0, 1, 0.1)
+result = do.call(rbind, mclapply(aneuploidies, function(prop.aneuploid){
+  
+  e = tessera::create.embryo(n.cells = 200,
+                             prop.aneuploids = prop.aneuploid,
+                             dispersions = 1,
+                             concordance = 1, seed = 44)
+  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  acc = calculate.difference(b, 5, prop.aneuploid*100)
+  
+  
+  cbind(anuploidy = rep(prop.aneuploid, length(acc[["values"]])), 
+        accuracy = round(acc[["values"]]))
+}, mc.cores = n.cores))
+
+all.vals = expand.grid("anuploidy" = aneuploidies,
+                       "accuracy" = c(sort(unique(round(result[,2]))), 100),
+                       "Count" = 0)
+
+data = as.data.frame(result) %>% 
+  dplyr::group_by(anuploidy, accuracy) %>%
+  dplyr::summarise(Count = dplyr::n()) %>%
+  rbind(., all.vals) %>%
+  dplyr::group_by(anuploidy, accuracy) %>%
+  dplyr::summarise(Count = sum(Count)) %>%
+  dplyr::mutate(Pct = Count/200*100) %>%
+  dplyr::arrange(anuploidy, accuracy) %>%
+  dplyr::group_by(anuploidy) %>%
+  dplyr::mutate(CumPct = cumsum(Pct))
+
+
+ggplot(data, aes(x = accuracy, y = CumPct, group = anuploidy, col = anuploidy)) + 
+  # geom_line() +
+  geom_step(size = 2) +
+    labs(y = "Percentage of biopsies",
+       x = "Percent difference between biopsy and embryo",
+       col = "Anuploidy") + 
+  scale_color_viridis_c() + 
+  coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
+  scale_x_continuous(breaks = seq(0, 100, 10)) +
+  scale_y_continuous(breaks = seq(0, 100, 5)) +
+  theme_classic()
+```
+
+When the embryo is entirely euploid or aneuploid, accuracy is of course perfect, but drops outside this range in a non-linear manner.
+
+Below, we show the effect of increasing dispersal from low to high.
+
+```{r, echo=FALSE, message=F, warning=F, cache=T, fig.cap="Embryos with varying dispersal of aneuploid cells"}
+
+make.dispersal.aneuploidy.plot = function(dispersal){
+  aneuploidies = seq(0, 1, 0.05)
+  result = do.call(rbind, mclapply(aneuploidies, function(prop.aneuploid){
+
+    e = tessera::create.embryo(n.cells = 200,
+                               prop.aneuploids = prop.aneuploid,
+                               dispersions = dispersal,
+                               concordance = 1, seed = 44)
+    b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+    acc = calculate.difference(b, 5, prop.aneuploid*100)
+    
+
+    cbind(anuploidy = rep(prop.aneuploid, length(acc[["values"]])), 
+        accuracy = acc[["values"]])
+  }, mc.cores = n.cores))
+  
+  all.vals = expand.grid("anuploidy" = aneuploidies,
+                         "accuracy" = c(sort(unique(round(result[,2]))), 100),
+                         "Count" = 0)
+  
+  data = as.data.frame(result) %>% 
+    dplyr::group_by(anuploidy, accuracy) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    rbind(., all.vals) %>%
+    dplyr::group_by(anuploidy, accuracy) %>%
+    dplyr::summarise(Count = sum(Count)) %>%
+    dplyr::mutate(Pct = Count/200*100) %>%
+    dplyr::arrange(anuploidy, accuracy) %>%
+    dplyr::group_by(anuploidy) %>%
+    dplyr::mutate(CumPct = cumsum(Pct))
+  
+  ggplot(data, aes(x = accuracy, y = CumPct, group = anuploidy, col = anuploidy)) + 
+  # geom_line() +
+  geom_step(size = 2) +
+    geom_text(x=75, y=75, label=paste("Dispersal:", dispersal), col="black") +
+    labs(y = "Percentage of biopsies",
+       x = "Percent difference between biopsy and embryo",
+       col = "Anuploidy") + 
+    
+  scale_color_viridis_c() + 
+  coord_cartesian(xlim = c(0, 100), ylim = c(0, 100)) +
+  scale_x_continuous(breaks = seq(0, 100, 10)) +
+  scale_y_continuous(breaks = seq(0, 100, 5)) +
+  theme_classic()
+}
+
+animation::saveGIF(
+  expr = {
+    for(i in seq(0, 1, 0.05)) plot(make.dispersal.aneuploidy.plot(i))
+  },
+  ani.width = 720, ani.height = 480,
+  movie.name = "Dispersal_aneuploidy.gif"
+)
+knitr::include_graphics("Dispersal_aneuploidy.gif")
+
+```
+
+If the dispersal is low (aneuploid cells are clustered), we see a lower overall success.
+
+## Combining aneuploidy rate and dispersal
+
+We can now display both aneuploidy rate and dispersal:
+
+```{r, echo=FALSE, eval=F, cache=T, message=F, warning=F}
+# i = 1
+# calc.biopsy.accuracy.both = function(prop.aneuploid, dispersal){
+#   # cat("Combination", i, "of", nrow(combinations), "\n")
+#   i <<- i + 1
+#   seeds = 1:n.replicate.seeds
+#   
+#   calc.biopsy.accuracy.seed = function(s){
+#     e = tessera::create.embryo(n.cells = 200,
+#                                prop.aneuploids = prop.aneuploid,
+#                                dispersions = dispersal,
+#                                concordance = 1, seed = s)
+#     b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+#     calculate.difference(b, 5, prop.aneuploid*100)
+#   }
+#   accuracies.for.all.seeds = sapply(seeds, calc.biopsy.accuracy.seed)
+#   cbind(aneuploidy=rep(prop.aneuploid, length(seeds)),
+#         dispersal=rep(dispersal, length(seeds)),
+#         accuracy=accuracies.for.all.seeds)
+# }
+# 
+# combinations = expand.grid(aneuploidies=seq(0, 1, 0.1),
+#                            dispersals=seq(0, 1, 0.1))
+# result = do.call(rbind, mcmapply(calc.biopsy.accuracy.both,
+#                                combinations$aneuploidies,
+#                                combinations$dispersals, 
+#                                SIMPLIFY = F, mc.cores = n.cores))
+# 
+# ggplot(as.data.frame(result), aes(x=aneuploidy, y=dispersal, fill=accuracy)) +
+#   geom_tile() +
+#   scale_fill_viridis_c() +
+#   labs(x = "Proportion of aneuploid cells",
+#        y = "Dispersal of aneuploid cells",
+#        fill = "Mean percent\ndifference\nto embryo") +
+#   theme_classic()
+
+```
+
+The most error is found when the cells are less than about 25% dispersed, and embryo aneuploidy is between 30-70%.
+
+# Changing the biopsy
+
+So far we have varied the parameters of the embryo, keeping the biopsy size constant. What happens if we change the biopsy instead?
+
+### Accuracy depends on the size of the biopsy relative to the embryo
+
+How does the distribution of aneuploid cells in a biopsy change as the size of the biopsy increases? The following animation shows the effect of increasing biopsy size from 1 to 10 cells in an embryo of 200 cells.
+
+```{r, echo=FALSE, warning=F, message=F, cache=T}
+e = tessera::create.embryo(n.cells = 200, 
+                           prop.aneuploids = 0.2, 
+                           dispersions = 1, 
+                           concordance = 1, seed = 42)
+
+
+make.biopsy.plot = function(biopsy){
+  b = tessera::take.all.biopsies(e, n.cells.per.sample = biopsy, chromosome = 1)
+  acc = calculate.difference(b, biopsy, 20)
+  p  = plot.biopsy.aneuploidy(b, biopsy, 20)
+  p + geom_vline(xintercept = 20) + 
+    geom_text(x=75, y=95, label=paste(biopsy, "cell biopsy:\n", 
+                                        sprintf(acc, fmt = '%#.2f'), 
+                                        "mean percent difference")) +
+    coord_cartesian(xlim = c(0, 100), ylim = c(0, 100))
+  
+}
+
+animation::saveGIF(
+  expr = {
+    for(i in 1:10){
+      plot(make.biopsy.plot(i))
+    }
+  },
+  ani.width = 720, ani.height = 480,
+  movie.name = "Biopsy_size.gif"
+)
+knitr::include_graphics("Biopsy_size.gif")
+```
+
+
+Converting the absolute number of cells into a fraction of the embryo size, and measuring across multiple embryos, we get the following:
+
+```{r, echo=FALSE, cache=T, fig.cap="Sampling more than 5% of the embryo is not more informative in most cases"}
+
+result = do.call(rbind, mclapply(seq(0.005, 0.15, 0.005), function(fraction.of.embryo.in.biopsy){
+  
+  biopsy.size = fraction.of.embryo.in.biopsy * 200
+
+  accuracies.for.all.seeds = sapply(1:n.replicate.seeds, function(s){
+    e = tessera::create.embryo(n.cells = 200,
+                           prop.aneuploids = 0.2,
+                           dispersions = 1,
+                           concordance = 1, seed = s)
+    b = tessera::take.all.biopsies(e, n.cells.per.sample = biopsy.size, chromosome = 1)
+    calculate.difference(b, biopsy.size, 20)
+  })
+  cbind(size=rep(fraction.of.embryo.in.biopsy, n.replicate.seeds),
+        accuracy=accuracies.for.all.seeds)
+}, mc.cores = n.cores))
+
+ggplot(as.data.frame(result), aes(x=size, y=accuracy, group=size)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(x="Fraction of embryo in biopsy",
+       y = "Mean percent difference between biopsy and embryo") +
+  coord_cartesian(ylim = c(0, 40)) +
+  scale_x_continuous(breaks = seq(0, 0.15, 0.01)) +
+  theme_classic()
+
+```
+
+The chart above is from an embryo with 200 cells and 20% aneuploidy, highly dispersed. How does the accuracy vary as embryo size changes from 100-300 cells?
+ 
+```{r, eval=F, echo=FALSE, warning=F, message=F, cache=T}
+
+combinations = expand.grid(embryo.size=seq(100, 300, 10),
+                           biopsy.fractions=seq(0.005, 0.10, 0.005))
+# i = 1
+result = do.call(rbind, mcmapply(function(embryo.size, biopsy.fraction){
+  # cat("Combination", i, "of", nrow(combinations), "\n")
+  # i <<- i + 1
+  biopsy.size = max(1, biopsy.fraction * embryo.size)# must have at least one cell
+  
+  accuracies.for.all.seeds = sapply(1:n.replicate.seeds, function(s){
+    e = tessera::create.embryo(n.cells = embryo.size,
+                               prop.aneuploids = 0.2,
+                               dispersions = 1,
+                               concordance = 1, seed = s)
+    b = tessera::take.all.biopsies(e, n.cells.per.sample = biopsy.size, chromosome = 1)
+    calculate.difference(b, biopsy.size, 20)
+  })
+  
+  cbind(size = rep(embryo.size, n.replicate.seeds),
+        biopsy.fraction = rep(biopsy.fraction, n.replicate.seeds),
+        accuracy = accuracies.for.all.seeds)
+},
+combinations$embryo.size,
+combinations$biopsy.fractions, 
+SIMPLIFY = F, mc.cores = n.cores))
+
+ggplot(as.data.frame(result), aes(x=size, y=biopsy.fraction*100)) +
+  geom_tile(mapping = aes(fill=accuracy)) +
+  geom_line(size = 2, col="red",
+            mapping = aes(x=x, y=y),
+            data = data.frame(x=seq(100, 300, 10),
+                              y=5/seq(100, 300, 10)*100)) +
+  scale_fill_viridis_c() +
+  labs(x ="Size of embryo",
+       y = "Percent of embryo in biopsy",
+       fill = "Mean percent\ndifference\nto embryo") +
+  theme_classic()
+
+```
+
