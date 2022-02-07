@@ -35,66 +35,6 @@ pgdis.classes = factor(c("Euploid", "Low level", "High level", "Aneuploid"),
 
 # Define functions
 
-plot.embryo = function(e){
-  # just show the state of the chromosome of interest
-  colours = factor(as.integer(bitwAnd(e$isAneuploid,1)),
-                   levels = c(0, 1))
-  
-  plot_ly( type="scatter3d",
-           mode="markers",
-           colors = c("#22FF22", "#222222"),
-           color=colours,
-           marker = list(
-             size = 25,
-             line = list(
-               color = '#111111',
-               width = 1
-             )
-           ),
-           hoverinfo="none") %>%
-    add_trace(
-      x = e$x,
-      y = e$y,
-      z = e$z,
-      showlegend = F,
-      hoverinfo = 'skip'
-    ) %>%
-    add_annotations( text="Click and drag to rotate",
-                     xref="paper", yref="paper",
-                     x=0.0, xanchor="left",
-                     y=1.0, yanchor="top",
-                     legendtitle=TRUE, showarrow=FALSE ) %>%
-    config(displayModeBar = FALSE, scrollZoom = F) %>%
-    layout(scene = list(
-      xaxis = list(autorange = F,
-                   fixedrange = TRUE, 
-                   showgrid = F, 
-                   showline = F,
-                   showticklabels = F,
-                   showaxeslabels = F,
-                   title = "",
-                   zeroline = F,
-                   range = list(-1, 1)), 
-      yaxis = list(fixedrange = TRUE, 
-                   autorange = F,
-                   showgrid = F, 
-                   showline = F,
-                   showaxeslabels = F,
-                   showticklabels = F,
-                   title = "",
-                   zeroline = F,
-                   range = list(-1, 1)),
-      zaxis = list(autorange = F,
-                   fixedrange = TRUE, 
-                   showgrid = F, 
-                   showline = F,
-                   showaxeslabels = F,
-                   showticklabels = F,
-                   zeroline = F,
-                   title = "",
-                   range = list(-1, 1))))
-}
-
 # Plot the biopsy results
 plot.biopsy.aneuploidy = function(n.biopsy.aneuploid, biopsy.size, pct.embryo.aneuploid){
   pct.biopsy.aneuploid = n.biopsy.aneuploid / biopsy.size * 100
@@ -236,13 +176,15 @@ In the first stage of the model, we alter the embryo parameters to find the effe
 We start by creating a single embryo of 200 cells, with a 20% aneuploidy rate (40 aneuploid cells). The aneuploid cells are highly dispersed throughout the embryo; it is unlikely, though not impossible, that two aneuploid cells will be adjacent.
 
 ```{r, echo=F, warning=F, fig.show="hold", fig.cap="Example 200 cell embryo with 20% aneuploidy, dispersed"}
-e = tessera::create.embryo(n.cells = 200, 
-                           prop.aneuploids = 0.2, 
-                           dispersions = 1, 
-                           concordance = 1, seed = 44)
+e = tessera::Embryo(n.cells = 200, 
+                    n.chrs = 1,
+                    prop.aneuploid = 0.2, 
+                    dispersal = 1, 
+                    concordance = 1, 
+                    rng.seed = 44)
 
 
-plot.embryo(e)
+plot(e)
 
 # # Save viewer settings (e.g. RStudio viewer pane)
 # op <- options()
@@ -269,7 +211,7 @@ Now to explore the possible biopsies from this embryo. We will take 5-cell biops
 
 ```{r, echo=F, fig.cap="Percentage of aneuploid cells in each biopsy"}
 
-b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
 
 plot.biopsy.aneuploidy(b, 5, 20)
 rates = calc.rates(b, 5, 20)
@@ -283,28 +225,14 @@ We need a measure that can capture the overall accuracy of the biopsy. This can 
 Now contrast this with an embryo that has the same aneuploidy rate of 20%, but with low dispersal of the aneuploid cells. Now it is very likely that an aneuploid cell has another aneuploid cell adjacent:
 
 ```{r, echo=F, warning=F, fig.show="hold", fig.cap="Example 200 cell embryo with 20% aneuploidy, clustered"}
-e = tessera::create.embryo(n.cells = 200, 
-                           prop.aneuploids = 0.2, 
-                           dispersions = 0, 
-                           concordance = 1, seed = 42)
+e = tessera::Embryo(n.cells = 200, 
+                    n.chrs = 1,
+                    prop.aneuploid = 0.2, 
+                    dispersal = 0, 
+                    concordance = 1, 
+                    rng.seed = 42)
 
-plot.embryo(e)
-# # Save viewer settings (e.g. RStudio viewer pane)
-# op <- options()
-# 
-# # Set viewer to web browser
-# options(viewer = NULL)
-# 
-# # Use web browser to save image
-# plot.embryo(e) %>% htmlwidgets::onRender(
-#   "function(el, x) {
-#   var gd = document.getElementById(el.id); 
-#   Plotly.downloadImage(gd, {format: 'png', width: 720, height: 480, filename: 'e2'});
-#   }"
-#  )
-# 
-# # Restore viewer to old setting (e.g. RStudio)
-# options(viewer = op$viewer)
+plot(e)
 knitr::include_graphics("e2.png")
 
 ```
@@ -313,7 +241,7 @@ The aneuploid cells are in a discrete patch in the embryo, and the distribution 
 
 ```{r, echo=F, fig.cap="Percentage of aneuploid cells in each biopsy"}
 
-b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
 
 plot.biopsy.aneuploidy(b, 5, 0.2)
 
@@ -329,11 +257,13 @@ We can now show how accuracy varies as we increase the aneuploidy level from 0% 
 
 ```{r, echo=F, warning=F, message=F, cache=T, fig.show = 'hold', fig.cap="Accuracy is lowest when half the embryo is aneuploid"}
 make.aneuploidy.plot = function(aneuploidy){
-  e = tessera::create.embryo(n.cells = 200, 
-                             prop.aneuploids = aneuploidy, 
-                             dispersions = 0, 
-                             concordance = 1, seed = 42)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200, 
+                    n.chrs = 1,
+                    prop.aneuploid = aneuploidy, 
+                    dispersal = 0, 
+                    concordance = 1, 
+                    rng.seed = 42)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   acc = calculate.difference(b, 5, aneuploidy*100)
   p  = plot.biopsy.aneuploidy(b, 5, aneuploidy*100)
   p + geom_vline(xintercept = aneuploidy*100) + 
@@ -360,11 +290,12 @@ These bar plots are useful, but we are cycling through several plots to see the 
 aneuploidies = seq(0, 0.5, 0.1)
 result = do.call(rbind, mclapply(aneuploidies, function(prop.aneuploid){
   
-  e = tessera::create.embryo(n.cells = 200,
-                             prop.aneuploids = prop.aneuploid,
-                             dispersions = 1,
-                             concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200,
+                      n.chrs = 1,
+                      prop.aneuploid = prop.aneuploid,
+                      dispersal = 1,
+                      concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   acc = calculate.difference(b, 5, prop.aneuploid*100)
   
   
@@ -385,18 +316,18 @@ Using these criteria, how accurate would our diaganoses be given a randomly samp
 
 ```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="PGDIS classes for embryos with 10% (euploid) and 50% aneuploidy (high-level) demonstrate the difference in accuracy from changing aneuploidy level" }
 
-e = tessera::create.embryo(n.cells = 200,
-                           prop.aneuploids = 0.1,
-                           dispersions = 1,
-                           concordance = 1, seed = 44)
-b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+e = tessera::Embryo(n.cells = 200,
+                           prop.aneuploid = 0.1,
+                           dispersal = 1,
+                           concordance = 1, rng.seed = 44)
+b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
 
 
-e2 = tessera::create.embryo(n.cells = 200,
-                           prop.aneuploids = 0.5,
-                           dispersions = 1,
-                           concordance = 1, seed = 44)
-b2 = tessera::take.all.biopsies(e2, n.cells.per.sample = 5, chromosome = 1)
+e2 = tessera::Embryo(n.cells = 200,
+                           prop.aneuploid = 0.5,
+                           dispersal = 1,
+                           concordance = 1, rng.seed = 44)
+b2 = tessera::takeAllBiopsies(e2, biopsy.size = 5, chromosome = 1)
 
 
 plot.pgdis(b, 5) + plot.pgdis(b2, 5)
@@ -409,11 +340,11 @@ We can see that at 10% aneuploidy, a little over half the biopsies match the emb
 
 
 result = sapply(seq(0.0, 1, 0.05), function(aneuploidy){
-  e = tessera::create.embryo(n.cells = 200,
-                           prop.aneuploids = aneuploidy,
-                           dispersions = 1,
-                           concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200,
+                           prop.aneuploid = aneuploidy,
+                           dispersal = 1,
+                           concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   pgdis.accuracy(b, 5, aneuploidy*100)
 })
 
@@ -435,11 +366,11 @@ We return to an embryo with 200 cells, and a fixed 20% aneuploidy. We can now va
 
 ```{r, echo=F, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Biopsy accuracy is higher when aneuploid cells are dispersed"}
 make.dispersal.plot = function(dispersal){
-  e = tessera::create.embryo(n.cells = 200, 
-                           prop.aneuploids = 0.2, 
-                           dispersions = dispersal, 
-                           concordance = 1, seed = 42)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200, 
+                           prop.aneuploid = 0.2, 
+                           dispersal = dispersal, 
+                           concordance = 1, rng.seed = 42)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   acc = calculate.difference(b, 5, 20)
   p  = plot.biopsy.aneuploidy(b, 5, 20)
   p + geom_vline(xintercept = 20) + 
@@ -467,11 +398,11 @@ We see that changing the dispersal of the aneuploid cells also impacts the biops
 dispersals = seq(0, 1, 0.05)
 result = do.call(rbind, mclapply(dispersals, function(dispersal){
   
-  e = tessera::create.embryo(n.cells = 200, 
-                             prop.aneuploids = 0.2, 
-                             dispersions = dispersal, 
-                             concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200, 
+                             prop.aneuploid = 0.2, 
+                             dispersal = dispersal, 
+                             concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   acc = calculate.difference(b, 5, 20)
   
   cbind(dispersal = rep(dispersal, length(acc[["values"]])), 
@@ -489,11 +420,11 @@ make.dispersal.aneuploidy.plot = function(dispersal){
   aneuploidies = seq(0, 0.5, 0.05)
   result = do.call(rbind, mclapply(aneuploidies, function(prop.aneuploid){
 
-    e = tessera::create.embryo(n.cells = 200,
-                               prop.aneuploids = prop.aneuploid,
-                               dispersions = dispersal,
-                               concordance = 1, seed = 44)
-    b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+    e = tessera::Embryo(n.cells = 200,
+                               prop.aneuploid = prop.aneuploid,
+                               dispersal = dispersal,
+                               concordance = 1, rng.seed = 44)
+    b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
     acc = calculate.difference(b, 5, prop.aneuploid*100)
     
 
@@ -524,18 +455,18 @@ Using these criteria, how accurate would our diaganoses be given a randomly samp
 
 ```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="PGDIS classes for embryos with 10% aneuploidy (euploid) with low and high dispersal demonstrate the difference in accuracy from changing dispersal" }
 
-e = tessera::create.embryo(n.cells = 200,
-                           prop.aneuploids = 0.1,
-                           dispersions = 0,
-                           concordance = 1, seed = 44)
-b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+e = tessera::Embryo(n.cells = 200,
+                           prop.aneuploid = 0.1,
+                           dispersal = 0,
+                           concordance = 1, rng.seed = 44)
+b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
 
 
-e2 = tessera::create.embryo(n.cells = 200,
-                           prop.aneuploids = 0.1,
-                           dispersions = 1,
-                           concordance = 1, seed = 44)
-b2 = tessera::take.all.biopsies(e2, n.cells.per.sample = 5, chromosome = 1)
+e2 = tessera::Embryo(n.cells = 200,
+                           prop.aneuploid = 0.1,
+                           dispersal = 1,
+                           concordance = 1, rng.seed = 44)
+b2 = tessera::takeAllBiopsies(e2, biopsy.size = 5, chromosome = 1)
 
 
 plot.pgdis(b, 5) + plot.pgdis(b2, 5)
@@ -548,11 +479,11 @@ We see that dispersal has a significant impact on biopsy results, with clustered
 
 
 result = sapply(seq(0.0, 1, 0.05), function(dispersal){
-  e = tessera::create.embryo(n.cells = 200,
-                           prop.aneuploids = 0.1,
-                           dispersions = dispersal,
-                           concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200,
+                           prop.aneuploid = 0.1,
+                           dispersal = dispersal,
+                           concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   pgdis.accuracy(b, 5, 10)
 })
 
@@ -579,11 +510,11 @@ combinations = expand.grid(aneuploidies = seq(0, 1, 0.1),
 # The possible outcomes from all combinations of embryo parameters
 result = do.call(rbind, mcmapply(function(aneuploidy, dispersal){
 
-  e = tessera::create.embryo(n.cells = 200,
-                             prop.aneuploids = aneuploidy,
-                             dispersions = dispersal,
-                             concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200,
+                             prop.aneuploid = aneuploidy,
+                             dispersal = dispersal,
+                             concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   
   cbind(aneuploidy = rep(aneuploidy, length(b)),
         dispersal  = rep(dispersal, length(b)),
@@ -613,14 +544,14 @@ So far we have varied the parameters of the embryo, keeping the biopsy size cons
 How does the distribution of aneuploid cells in a biopsy change as the size of the biopsy increases? The following animation shows the effect of increasing biopsy size from 1 to 10 cells in an embryo of 200 cells.
 
 ```{r, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Biopsy size affects accuracy"}
-e = tessera::create.embryo(n.cells = 200, 
-                           prop.aneuploids = 0.2, 
-                           dispersions = 1, 
-                           concordance = 1, seed = 42)
+e = tessera::Embryo(n.cells = 200, 
+                           prop.aneuploid = 0.2, 
+                           dispersal = 1, 
+                           concordance = 1, rng.seed = 42)
 
 
 make.biopsy.plot = function(biopsy){
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = biopsy, chromosome = 1)
+  b = tessera::takeAllBiopsies(e, biopsy.size = biopsy, chromosome = 1)
   acc = calculate.difference(b, biopsy, 20)
   p  = plot.biopsy.aneuploidy(b, biopsy, 20)
   p + geom_vline(xintercept = 20) + 
@@ -650,11 +581,11 @@ samples = seq(0.005, 0.15, 0.005)
 result = do.call(rbind, mclapply(samples, function(fraction.of.embryo.in.biopsy){
   biopsy.size = fraction.of.embryo.in.biopsy * 200
   
-  e = tessera::create.embryo(n.cells = 200,
-                             prop.aneuploids = 0.2,
-                             dispersions = 1,
-                             concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = biopsy.size, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200,
+                             prop.aneuploid = 0.2,
+                             dispersal = 1,
+                             concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = biopsy.size, chromosome = 1)
   acc = calculate.difference(b, biopsy.size, 20)
   
   
@@ -680,11 +611,11 @@ make.biopsy.size.plot = function(embryo.size){
     biopsy.size = round(min(max(1, biopsy.fraction * embryo.size), embryo.size))
 
     # Make embryo of the desired size
-    e = tessera::create.embryo(n.cells = embryo.size,
-                               prop.aneuploids = 0.2,
-                               dispersions = 1,
-                               concordance = 1, seed = 44)
-    b = tessera::take.all.biopsies(e, n.cells.per.sample = biopsy.size, chromosome = 1)
+    e = tessera::Embryo(n.cells = embryo.size,
+                               prop.aneuploid = 0.2,
+                               dispersal = 1,
+                               concordance = 1, rng.seed = 44)
+    b = tessera::takeAllBiopsies(e, biopsy.size = biopsy.size, chromosome = 1)
     acc = calculate.difference(b, biopsy.size, 20)
 
     cbind(fraction = rep(biopsy.fraction, length(acc[["values"]])), 
@@ -718,11 +649,11 @@ We can now explore the impact of biopsy size on the PGDIS classifictions. We sta
 
 
 result = sapply(seq(3, 50, 1), function(biopsy.size){
-  e = tessera::create.embryo(n.cells = 200,
-                           prop.aneuploids = 0.2,
-                           dispersions = 1,
-                           concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = biopsy.size, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200,
+                           prop.aneuploid = 0.2,
+                           dispersal = 1,
+                           concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = biopsy.size, chromosome = 1)
   pgdis.accuracy(b, biopsy.size, 20)
 })
 
@@ -758,11 +689,11 @@ combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
 # The possible outcomes from all combinations of embryo parameters
 result = do.call(rbind, mcmapply(function(aneuploidy, dispersal){
 
-  e = tessera::create.embryo(n.cells = 200,
-                             prop.aneuploids = aneuploidy,
-                             dispersions = dispersal,
-                             concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200,
+                             prop.aneuploid = aneuploidy,
+                             dispersal = dispersal,
+                             concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   
   cbind(aneuploidy = rep(aneuploidy, length(b)),
         dispersal  = rep(dispersal, length(b)),
@@ -857,11 +788,11 @@ combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
 # The possible outcomes from all combinations of embryo parameters
 result = do.call(rbind, mcmapply(function(aneuploidy, dispersal){
 
-  e = tessera::create.embryo(n.cells = 200,
-                             prop.aneuploids = aneuploidy,
-                             dispersions = dispersal,
-                             concordance = 1, seed = 44)
-  b = tessera::take.all.biopsies(e, n.cells.per.sample = 5, chromosome = 1)
+  e = tessera::Embryo(n.cells = 200,
+                             prop.aneuploid = aneuploidy,
+                             dispersal = dispersal,
+                             concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   
   cbind(aneuploidy = rep(aneuploidy, length(b)),
         dispersal  = rep(dispersal, length(b)),
