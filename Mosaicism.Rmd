@@ -2,20 +2,21 @@
 title: "Tessera: a tool to visualise embryo mosaicism"
 always_allow_html: true
 output: 
-  # bookdown::html_document2:
-  #   toc: true
-  #   toc_float: true
-  #   toc_levels: 4
-  #   highlight: tango
-  bookdown::word_document2:
+  bookdown::html_document2:
     toc: true
-    fig_width: 9
-    number_sections: true
+    toc_float: true
+    toc_levels: 4
+    highlight: tango
+  # bookdown::word_document2:
+  #   toc: true
+  #   fig_width: 9
+  #   number_sections: true
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, echo=F, message=F}
 knitr::opts_chunk$set(echo = TRUE)
 library(tessera)
+library(magrittr)
 library(plotly)
 library(ggplot2)
 library(animation)
@@ -203,7 +204,7 @@ plot(e)
 # # Restore viewer to old setting (e.g. RStudio)
 # options(viewer = op$viewer)
 
-knitr::include_graphics("e1.png")
+# knitr::include_graphics("e1.png")
 
 ```
 
@@ -233,7 +234,7 @@ e = tessera::Embryo(n.cells = 200,
                     rng.seed = 42)
 
 plot(e)
-knitr::include_graphics("e2.png")
+# knitr::include_graphics("e2.png")
 
 ```
 
@@ -255,24 +256,24 @@ The accuracy score for this embryo is `r acc[["mean"]]`, with a standard deviati
 
 We can now show how accuracy varies as we increase the aneuploidy level from 0% to 100%:
 
-```{r, echo=F, warning=F, message=F, cache=T, fig.show = 'hold', fig.cap="Accuracy is lowest when half the embryo is aneuploid"}
+```{r, echo=F, warning=F, message=F, cache=T, fig.show = 'hold', fig.cap="Accuracy is lowest when half the embryo is aneuploid (animated gif)"}
 make.aneuploidy.plot = function(aneuploidy){
-  e = tessera::Embryo(n.cells = 200, 
+  e = tessera::Embryo(n.cells = 200,
                     n.chrs = 1,
-                    prop.aneuploid = aneuploidy, 
-                    dispersal = 0, 
-                    concordance = 1, 
+                    prop.aneuploid = aneuploidy,
+                    dispersal = 0,
+                    concordance = 1,
                     rng.seed = 42)
   b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   acc = calculate.difference(b, 5, aneuploidy*100)
   p  = plot.biopsy.aneuploidy(b, 5, aneuploidy*100)
-  p + geom_vline(xintercept = aneuploidy*100) + 
-    geom_text(x=75, y=95, label=paste(aneuploidy*100, "% aneuploid cells:\n", 
-                                      sprintf(acc[["mean"]], fmt = '%#.2f'), 
-                                      "mean percent difference\nSD:", 
+  p + geom_vline(xintercept = aneuploidy*100) +
+    geom_text(x=75, y=95, label=paste(aneuploidy*100, "% aneuploid cells:\n",
+                                      sprintf(acc[["mean"]], fmt = '%#.2f'),
+                                      "mean percent difference\nSD:",
                                       sprintf(acc[["sd"]], fmt = '%#.2f'), "%")) +
     coord_cartesian(xlim = c(0, 100), ylim = c(0, 100))
-  
+
 }
 
 invisible(animation::saveGIF(
@@ -283,7 +284,7 @@ invisible(animation::saveGIF(
 knitr::include_graphics("Aneuploidy.gif")
 ```
 
-These bar plots are useful, but we are cycling through several plots to see the impact of a single variable. Another way to represent this data is through cumulative plots of embryo accuracy. Here we show the effect of increasing embryo aneuploidy from 0% to 50% (omitting 50%-100% because they roughly mirror the former). Higher values to the left are better:
+The bar plots above are useful, but we would cycle through several plots to see the impact of altering a single variable. Another way to represent this data is through cumulative plots of embryo accuracy. Here we show the effect of increasing embryo aneuploidy from 0% to 50% (omitting 50%-100% because they roughly mirror the former). Higher values to the left are better:
 
 ```{r, echo=FALSE, cache=T, fig.show='hold', fig.cap="Embryos with high dispersal of aneuploid cells"}
 
@@ -306,11 +307,11 @@ result = do.call(rbind, mclapply(aneuploidies, function(prop.aneuploid){
 plot.step(result, "Aneuploidy", aneuploidies)
 ```
 
-The distribution becomes a little clearer; we can see that at 50% aneuploidy, all embryos have at least a 10% difference to the embryo. The maximum difference between an embryo and any biopsy is 50 percentage points.
+The distribution becomes a little clearer; we can see that at 50% aneuploidy, no biopsies exactly match the embryo; 65% of biopsies have at least a 10% difference to the embryo. Translating this back to cells: since the biopsy is 5 cells a 10% difference from 50% embryo aneuploidy means either 40% of the biopsy is aneuploid (2 cells) or 60% of the biopsy is aneuploid (3 cells). 95% of biopsies have _at least_ a 30% difference to the embryo.
 
 ## Aneuploidy with respect to PGDIS classification thresholds
 
-So far we have been simulating a range of embryo parameters and biopsy outcomes with little consideration of how these will be interpreted in the clinic. According to guidelines of the Preimplantation Genetic Diagnosis International Society (PGDIS), a blastocyst will be considered euploid if there are less than 20% aneuploid cells. Aneuploidy of 20%-40% is considered low level mosaic, 40%-80% high level mosaic, and above 80% is aneuploid (Gleicher et al., 2020; Munné et al. 2020).
+So far we have been simulating a range of embryo parameters and biopsy outcomes without consideration of how these will be interpreted in the clinic. According to guidelines of the Preimplantation Genetic Diagnosis International Society (PGDIS), a blastocyst will be considered euploid if there are less than 20% aneuploid cells. Aneuploidy of 20%-40% is considered low level mosaic, 40%-80% high level mosaic, and above 80% is aneuploid (Gleicher et al., 2020; Munné et al. 2020).
 
 Using these criteria, how accurate would our diaganoses be given a randomly sampled 5-cell biopsy from an embryo with 10% aneuploidy or 50% aneuploidy and high dispersal?
 
@@ -362,24 +363,24 @@ ggplot(result, aes(x = aneuploidy, y = accuracy)) +
 
 ## The effect of dispersal on biopsy results
 
-We return to an embryo with 200 cells, and a fixed 20% aneuploidy. We can now vary the dispersal of the aneuploid cells within the embryo. The accuracy varies with dispersal as follows:
+We return to an embryo with 200 cells, and a fixed 20% aneuploidy. We can now vary the dispersal of the aneuploid cells within the embryo. The accuracy varies with dispersal as follows.
 
-```{r, echo=F, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Biopsy accuracy is higher when aneuploid cells are dispersed"}
+```{r, echo=F, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Biopsy accuracy is higher when aneuploid cells are dispersed  (animated gif)"}
 make.dispersal.plot = function(dispersal){
-  e = tessera::Embryo(n.cells = 200, 
-                           prop.aneuploid = 0.2, 
-                           dispersal = dispersal, 
+  e = tessera::Embryo(n.cells = 200,
+                           prop.aneuploid = 0.2,
+                           dispersal = dispersal,
                            concordance = 1, rng.seed = 42)
   b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
   acc = calculate.difference(b, 5, 20)
   p  = plot.biopsy.aneuploidy(b, 5, 20)
-  p + geom_vline(xintercept = 20) + 
-    geom_text(x=75, y=95, label=paste(dispersal*100, "% dispersal of cells:\n", 
-                                        sprintf(acc[["mean"]], fmt = '%#.2f'), 
-                                      "mean percent difference\nSD:", 
+  p + geom_vline(xintercept = 20) +
+    geom_text(x=75, y=95, label=paste(dispersal*100, "% dispersal of cells:\n",
+                                        sprintf(acc[["mean"]], fmt = '%#.2f'),
+                                      "mean percent difference\nSD:",
                                       sprintf(acc[["sd"]], fmt = '%#.2f'), "%")) +
     coord_cartesian(xlim = c(0, 100), ylim = c(0, 100))
-  
+
 }
 
 invisible(animation::saveGIF(
@@ -414,7 +415,7 @@ plot.step(result, "Dispersal", dispersals)
 
 To confirm this, we show below the effect of increasing dispersal from low to high over a range of aneuploidies.
 
-```{r, echo=FALSE, message=F, warning=F, cache=T, fig.show='hold', fig.cap="Embryos with varying dispersal of aneuploid cells"}
+```{r, echo=FALSE, message=F, warning=F, cache=T, fig.show='hold', fig.cap="Embryos with varying dispersal of aneuploid cells  (animated gif)"}
 
 make.dispersal.aneuploidy.plot = function(dispersal){
   aneuploidies = seq(0, 0.5, 0.05)
@@ -543,7 +544,7 @@ So far we have varied the parameters of the embryo, keeping the biopsy size cons
 
 How does the distribution of aneuploid cells in a biopsy change as the size of the biopsy increases? The following animation shows the effect of increasing biopsy size from 1 to 10 cells in an embryo of 200 cells.
 
-```{r, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Biopsy size affects accuracy"}
+```{r, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Biopsy size affects accuracy  (animated gif)"}
 e = tessera::Embryo(n.cells = 200, 
                            prop.aneuploid = 0.2, 
                            dispersal = 1, 
@@ -599,7 +600,7 @@ plot.step(result, "Biopsy fraction", samples)
 
 It appears that there is little benefit to increasing the biopsy size to more than ~5% of the embryo size. The chart above is from an embryo with 200 cells and 20% aneuploidy, highly dispersed. How does the accuracy vary as embryo size changes from 100-300 cells?
  
-```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Sampling more than 5% of the embryo is not more informative regardless of embryo size"}
+```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Sampling more than 5% of the embryo is not more informative regardless of embryo size  (animated gif)"}
 
 embryo.sizes = seq(100, 300, 20)
 biopsy.fractions = seq(0.005, 0.15, 0.005)
@@ -830,7 +831,7 @@ ggplot(output.aneuploidy%>%dplyr::filter(n.aneuploid==1), aes(x = EmbryoClass, y
 
 We can also show the probability of origins for biopsies for the full range of 0-5 aneuploid cells:
 
-```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Liklihood of each PGDIS class producing a 5-cell biopsy with a given number of aneuploid cells" }
+```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Liklihood of each PGDIS class producing a 5-cell biopsy with a given number of aneuploid cells", fig.height=7 }
 
 ggplot(output.aneuploidy, aes(x = EmbryoClass, y = PctTotal)) + 
   geom_col() + 
@@ -856,4 +857,9 @@ This is clearly a simple model using a toy embryo. The predictive power is limit
  
  
  It would be expeccted that dispersal is generally clustered, with aneuploid cells resulting from an initial non-disjunction event. However cases of multiple independent aneuploidies have been noted (e.g. Mendiola et al 2022).
+ 
+# TODO
+ 
+ - run the simulations over a several embryos for each parameter combination
+ - develop reverse lookup tool in tessera
 
