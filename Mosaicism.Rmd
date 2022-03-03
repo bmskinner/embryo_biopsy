@@ -78,6 +78,7 @@ calculate.difference = function(n.biopsy.aneuploid, biopsy.size, pct.embryo.aneu
   list("mean" = mean(vals), "sd" = sd(vals), "values" = vals)
 }
 
+# Create a step chart
 plot.step =  function(result, variable.name, variable.values){
   input = data.frame(variable = result[,1],
                       accuracy = result[,2])
@@ -577,10 +578,10 @@ Converting the absolute number of cells into a fraction of the embryo size, we g
 
 ```{r, eval=T, echo=FALSE, cache=T, fig.show='hold', fig.cap="Biopsy size does not drastically affect the accuracy of the biopsy beyond about 5% of the embryo"}
 
-samples = seq(0.005, 0.15, 0.005)
+samples = seq(3, 31, 1)
 
 result = do.call(rbind, mclapply(samples, function(fraction.of.embryo.in.biopsy){
-  biopsy.size = fraction.of.embryo.in.biopsy * 200
+  biopsy.size = fraction.of.embryo.in.biopsy
   
   e = tessera::Embryo(n.cells = 200,
                              prop.aneuploid = 0.2,
@@ -590,11 +591,25 @@ result = do.call(rbind, mclapply(samples, function(fraction.of.embryo.in.biopsy)
   acc = calculate.difference(b, biopsy.size, 20)
   
   
-  cbind(anuploidy = rep(fraction.of.embryo.in.biopsy, length(acc[["values"]])), 
+  cbind(anuploidy = rep(biopsy.size, length(acc[["values"]])), 
         accuracy = acc[["values"]])
 }, mc.cores = n.cores))
 
-plot.step(result, "Biopsy fraction", samples)
+plot.step(result, "Biopsy size", samples)
+
+
+```
+
+We can focus on just two biopsy sizes, 5 cells and 10 cells:
+
+```{r, eval=T, echo=FALSE, cache=T, fig.show='hold', fig.cap="Changing biopsy size from 5 to 10 cells does not dramatically improve accuracy"}
+
+# Filter to just 5 and 10 cell biopsies in 200 cell embryo
+# Note that the biopsy size is in the column called aneuploidy
+# for compatibility with plot.step
+
+filt = result[result[,1]==5 | result[,1]==10,]
+plot.step(filt, "Biopsy size", c(5, 10))
 
 ```
 
@@ -640,7 +655,7 @@ knitr::include_graphics("Embryo_size_v_biopsy_size.gif")
 
 ```
 
-It is clear that the overall size of the embryo has little effect compared to the biopsy size, and as we saw above there are few benefits to increasing biopsy size to more than 5% of the embryo size.
+It is clear that the overall size of the embryo has little effect compared to the biopsy size, and as we saw above there are few benefits to increasing biopsy size to more than 5-10 cells of the embryo size.
 
 ## Biopsy size with respect to PGDIS classification thresholds
 
@@ -835,7 +850,7 @@ We can also show the probability of origins for biopsies for the full range of 0
 
 ggplot(output.aneuploidy, aes(x = EmbryoClass, y = PctTotal)) + 
   geom_col() + 
-  geom_text(aes(label =  sprintf(PctTotal, fmt = '%#.2f'), y = PctTotal-5), col="white") + 
+  geom_text(aes(label =  sprintf(PctTotal, fmt = '%#.2f'), y = PctTotal-5), col = "white") + 
   labs(y = "Percent of biopsies from this class") +
   coord_cartesian(ylim = c(0, 100)) + 
   scale_y_continuous(breaks = seq(0, 100, 20)) +
@@ -844,7 +859,62 @@ ggplot(output.aneuploidy, aes(x = EmbryoClass, y = PctTotal)) +
   theme(axis.title.x = element_blank())
 ```
 
-We can conclude from this that although there are limitations to biopsies, a 5-cell biopsy of a 200 cell embryo is able to give a useful indication as to the true level of aneuploidy of the embryo, but, as one would expect, biopsies have best accuracy at the extremes of low or high aneuploidy.
+We can conclude from this that although there are limitations to biopsies, a 5-cell biopsy of a 200 cell embryo is able to give a useful indication as to the true level of aneuploidy of the embryo when aneuploidy is low or high. This can be visualised more clearly as follows:
+
+```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Confidently relating biopsy aneuploidy to embryo aneuploidy is only possible if dispersal is high" }
+
+zero.data = expand.grid(aneuploidy = seq(0, 1, 0.05),
+                        PctBiopsyAneuploid  = seq(0, 100, 20),
+                        Count = 0)
+
+clumpy.embryos = result %>% dplyr::filter(dispersal == 0) %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::summarise(Count = dplyr::n()) %>%
+  dplyr::bind_rows(., zero.data) %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::summarise(Count = sum(Count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(PctBiopsyAneuploid) %>%
+  dplyr::mutate(CountBiopsy = sum(Count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::mutate(PctTotal = Count/CountBiopsy * 100, dispersal = 0 )
+
+dispersed.embryos = result %>% dplyr::filter(dispersal == 1) %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::summarise(Count = dplyr::n()) %>%
+  dplyr::bind_rows(., zero.data) %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::summarise(Count = sum(Count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(PctBiopsyAneuploid) %>%
+  dplyr::mutate(CountBiopsy = sum(Count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::mutate(PctTotal = Count/CountBiopsy * 100, dispersal = 1 )
+
+both.embryos = rbind(dispersed.embryos, clumpy.embryos)
+
+ggplot(both.embryos, aes(x = PctBiopsyAneuploid, y = aneuploidy, fill=PctTotal))+
+  geom_tile() +
+  # geom_text(label = clumpy.embryos$PctTotal) +
+  scale_fill_viridis_c(breaks = seq(0, 30, 5)) +
+  labs(x = "Biopsy aneuploidy",
+       y = "Embryo aneuploidy",
+       fill = "Percentage\nof biopsies") +
+  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(breaks = seq(0, 100, 20)) +
+  theme_classic() + 
+  facet_wrap(~dispersal)
+```
+
+When aneuploid cells are dispersed, there is a clear correlation between the aneuploidy in the biopsy and the aneuploidy in the embryo. However, if aneuploid cells are clustered, there is no clear correlation, and we cannot infer the embryo aneuploidy except in cases when there is 0% or 100% aneuploidy.
+
+# Can we improve biopsy usefulness with multiple biopsies?
+
+We have seen that biopsies are not informative except when they are entirely euploid or aneuploid. We have also seen that increasing the biopsy size from 5 cells to 10 cells provides little extra information. What if we instead take two separate 5-cell biopsies, that could be from different regions of the embryo? Does this provide us with better information?
+
+
 
 # Caveats and limitations
 
