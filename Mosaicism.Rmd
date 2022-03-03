@@ -308,7 +308,7 @@ result = do.call(rbind, mclapply(aneuploidies, function(prop.aneuploid){
 plot.step(result, "Aneuploidy", aneuploidies)
 ```
 
-The distribution becomes a little clearer; we can see that at 50% aneuploidy, no biopsies exactly match the embryo; 65% of biopsies have at least a 10% difference to the embryo. Translating this back to cells: since the biopsy is 5 cells a 10% difference from 50% embryo aneuploidy means either 40% of the biopsy is aneuploid (2 cells) or 60% of the biopsy is aneuploid (3 cells). 95% of biopsies have _at least_ a 30% difference to the embryo.
+The distribution becomes a little clearer; we can see that at 50% aneuploidy, no biopsies exactly match the embryo; 65% of biopsies have at least a 10% difference to the embryo. Translating this back to cells: since the biopsy is 5 cells a 10% difference from 50% embryo aneuploidy means either 40% of the biopsy is aneuploid (2 cells) or 60% of the biopsy is aneuploid (3 cells). 95% of biopsies have _at most_ a 30% difference to the embryo.
 
 ## Aneuploidy with respect to PGDIS classification thresholds
 
@@ -655,7 +655,7 @@ knitr::include_graphics("Embryo_size_v_biopsy_size.gif")
 
 ```
 
-It is clear that the overall size of the embryo has little effect compared to the biopsy size, and as we saw above there are few benefits to increasing biopsy size to more than 5-10 cells of the embryo size.
+It is clear that the overall size of the embryo has little effect compared to the biopsy size, and as we saw above there are few benefits to increasing biopsy size to more than 5-10 cells.
 
 ## Biopsy size with respect to PGDIS classification thresholds
 
@@ -914,7 +914,46 @@ When aneuploid cells are dispersed, there is a clear correlation between the ane
 
 We have seen that biopsies are not informative except when they are entirely euploid or aneuploid. We have also seen that increasing the biopsy size from 5 cells to 10 cells provides little extra information. What if we instead take two separate 5-cell biopsies, that could be from different regions of the embryo? Does this provide us with better information?
 
+We start with an embryo with 20% aneuploidy with no dispersal.
 
+```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="Taking two five cell biopsies improves over one 10 cell biopsy"}
+
+
+e = tessera::Embryo(n.cells = 200,
+                             prop.aneuploid = 0.2,
+                             dispersal = 0,
+                             concordance = 1, rng.seed = 44)
+b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
+
+# p1 = plot.biopsy.aneuploidy(b, 5, 20)
+
+# Get all pairwise combinations of biopsy result
+# Ignore the issue of double sampling for now
+
+g = as.data.frame(expand.grid(b, b)) %>%
+  dplyr::mutate(Avg = (Var1+Var2)/2)
+
+# p2 = plot.biopsy.aneuploidy(g$Avg, 5, 20)
+
+# compare to the 10 cell biopsies from the same embryo
+b10 = tessera::takeAllBiopsies(e, biopsy.size = 10, chromosome = 1)
+
+# p3 = plot.biopsy.aneuploidy(b10, 10, 20)
+
+p3 = plot.pgdis(b, 5) + labs(title = "5 cell")
+
+p4 = plot.pgdis(g$Avg, 5) + labs(title = "2x5 cell")
+# pgdis.accuracy(g$Avg, 5, 20)
+
+p5 = plot.pgdis(b10, 10) + labs(title = "10 cell")
+# pgdis.accuracy(b10, 10, 20)
+
+p3 + p4 + p5
+
+
+```
+
+At a first approximation, two 5 cell biopsies appear to offer a slight improvement over a single 10 cell biopsy. The correct PGDIS classification (low level) is assigned in `r pgdis.accuracy(g$Avg, 5, 20)`% of 2x5 biopsies rather than `r pgdis.accuracy(b10, 10, 20)`% in a 10-cell biopsy and `r pgdis.accuracy(b, 5, 20)`% in a single 5-cell biopsy.
 
 # Caveats and limitations
 
