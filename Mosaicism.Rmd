@@ -953,7 +953,84 @@ p3 + p4 + p5
 
 ```
 
-At a first approximation, two 5 cell biopsies appear to offer a slight improvement over a single 10 cell biopsy. The correct PGDIS classification (low level) is assigned in `r pgdis.accuracy(g$Avg, 5, 20)`% of 2x5 biopsies rather than `r pgdis.accuracy(b10, 10, 20)`% in a 10-cell biopsy and `r pgdis.accuracy(b, 5, 20)`% in a single 5-cell biopsy.
+At a first approximation, two 5 cell biopsies appear to offer a slight improvement over a single 10 cell biopsy. The correct PGDIS classification (low level) is assigned in `r pgdis.accuracy(g$Avg, 5, 20)`% of 2x5 biopsies rather than `r pgdis.accuracy(b10, 10, 20)`% in a 10-cell biopsy and `r pgdis.accuracy(b, 5, 20)`% in a single 5-cell biopsy. We note however that this despite this increase the overall accuracy remains low.
+
+Let's compare the correlation of biopsy aneuploidy with embryo aneuploidy under a 2x5 cell model.
+
+
+```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap="2x5 biopsies do not overcome the issues in interpreting biopsy aneuploidy "}
+combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
+                           dispersals   = seq(0, 1, 0.05))
+
+# The possible outcomes from all combinations of embryo parameters
+result = do.call(rbind, mcmapply(function(aneuploidy, dispersal){
+
+  e = tessera::Embryo(n.cells = 200,
+                             prop.aneuploid = aneuploidy,
+                             dispersal = dispersal,
+                             concordance = 1, rng.seed = 44)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
+  g = (as.data.frame(expand.grid(b, b)) %>%
+    dplyr::mutate(Avg = (Var1+Var2)/2))$Avg
+
+  cbind(aneuploidy = rep(aneuploidy, length(g)),
+        dispersal  = rep(dispersal, length(g)),
+        n.aneuploid = g)
+}, mc.cores = n.cores,
+aneuploidy = combinations$aneuploidies,
+dispersal  = combinations$dispersals,
+SIMPLIFY = F)) %>% as.data.frame
+result$PctBiopsyAneuploid = result$n.aneuploid / 5 * 100
+
+
+zero.data = expand.grid(aneuploidy = seq(0, 1, 0.05),
+                        PctBiopsyAneuploid  = seq(0, 100, 10),
+                        Count = 0)
+
+clumpy.embryos = result %>% dplyr::filter(dispersal == 0) %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::summarise(Count = dplyr::n()) %>%
+  dplyr::bind_rows(., zero.data) %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::summarise(Count = sum(Count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(PctBiopsyAneuploid) %>%
+  dplyr::mutate(CountBiopsy = sum(Count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::mutate(PctTotal = Count/CountBiopsy * 100, dispersal = 0 )
+
+dispersed.embryos = result %>% dplyr::filter(dispersal == 1) %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::summarise(Count = dplyr::n()) %>%
+  dplyr::bind_rows(., zero.data) %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::summarise(Count = sum(Count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(PctBiopsyAneuploid) %>%
+  dplyr::mutate(CountBiopsy = sum(Count)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(PctBiopsyAneuploid, aneuploidy) %>%
+  dplyr::mutate(PctTotal = Count/CountBiopsy * 100, dispersal = 1 )
+
+both.embryos = rbind(dispersed.embryos, clumpy.embryos)
+
+ggplot(both.embryos, aes(x = PctBiopsyAneuploid, y = aneuploidy, fill=PctTotal))+
+  geom_tile() +
+  # geom_text(label = clumpy.embryos$PctTotal) +
+  scale_fill_viridis_c(breaks = seq(0, 60, 5)) +
+  labs(x = "Biopsy aneuploidy",
+       y = "Embryo aneuploidy",
+       fill = "Percentage\nof biopsies") +
+  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(breaks = seq(0, 100, 20)) +
+  theme_classic() +
+  facet_wrap(~dispersal)
+
+
+```
+
+There is an improvement versus a 1x5 biopsy, but not an improvement that gives more confidence in predicting embryo aneuploidy when dispersal is low.
 
 # Caveats and limitations
 
