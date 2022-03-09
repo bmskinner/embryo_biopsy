@@ -30,10 +30,6 @@ n.cores = ifelse(Sys.info()["sysname"]=="Windows", 1, 20) # parallel only works 
 
 pgdis.classes = factor(c("Euploid", "Low level", "High level", "Aneuploid"), 
                        levels = c("Euploid", "Low level", "High level", "Aneuploid"))
-```
-
-
-```{r functions, echo=F, warning=F, message=F, warning=F}
 
 # Define functions
 
@@ -777,6 +773,81 @@ ggplot(result, aes(x = biopsy.size, y = accuracy)) +
 ```
 
 These data are noisy, with a repeating pattern every 5 cells due to the hard boundaries of the PGDIS classifiation scheme. We see though that there is little to no benefit in sampling more than 5-10 cells from an embryo.
+
+## Variability in embryo and biopsy size
+
+So far we have been using embryos and biopsies with exact sizes. In reality, there may be variation - the size of an embryo may be estimated inexactly, and a biopsy may contain +/- a cell, due to the difficulties in taking biopsies. We can add some of this uncertainty to the model by allowing our embryo and biopsy sizes to vary from their target under a normal distribution.
+
+
+```{r, eval=T, echo=FALSE, cache=T, fig.show='hold', fig.cap="Biopsy size does not drastically affect the accuracy of the biopsy beyond about 5% of the embryo"}
+
+combinations = expand.grid(samples = seq(3, 31, 1),
+                           seeds   = 1:n.replicates)
+
+result = do.call(rbind, mcmapply(function(biopsy.size, seed){
+
+  e = tessera::Embryo(n.cells = 200,
+                      prop.aneuploid = 0.2,
+                      dispersal = 1,
+                      concordance = 1, 
+                      rng.seed = seed,
+                      embryo.size.fixed = F,
+                      embryo.size.sd = 5)
+  b = tessera::takeAllBiopsies(e, biopsy.size = biopsy.size, chromosome = 1,
+                               biopsy.size.fixed = F, biopsy.size.sd = 1)
+  acc = calculate.difference(b, biopsy.size, 20)
+  
+  cbind(anuploidy = rep(biopsy.size, length(acc[["values"]])), 
+        accuracy = acc[["values"]])
+}, 
+biopsy.size = combinations$samples,
+seed        = combinations$seeds,
+mc.cores = n.cores, SIMPLIFY = F))
+
+plot.step(result, "Biopsy size", combinations$samples)
+
+```
+
+It is apparent that there is little overall difference when allowing some variation in embryo and biopsy size. We can confirm this in relation to PGDIS classification:
+
+```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.cap=paste("Biopsy and embryo size variation does not greatly affect the model results with a biopsy sd of 1. Error bars show standard deviation across", n.replicates, "replicates")}
+combinations = expand.grid(biopsy.sizes = seq(3, 50, 1),
+                           seeds   = 1:n.replicates)
+
+result = do.call(rbind, mcmapply(function(biopsy.size, seed){
+  
+  e = tessera::Embryo(n.cells = 200,
+                      prop.aneuploid = 0.2,
+                      dispersal = 1,
+                      concordance = 1, rng.seed = seed,
+                      embryo.size.fixed = F,
+                      embryo.size.sd = 5)
+  b = tessera::takeAllBiopsies(e, biopsy.size = biopsy.size, chromosome = 1,
+                               biopsy.size.fixed = F, biopsy.size.sd = 1)
+ 
+  cbind(biopsy.size = rep(biopsy.size, length(b)), 
+        accuracy = pgdis.accuracy(b, biopsy.size, 20))
+}, 
+biopsy.size = combinations$biopsy.sizes,
+seed = combinations$seeds,
+mc.cores = n.cores, SIMPLIFY = F)) %>% 
+  as.data.frame %>%
+  dplyr::group_by(biopsy.size) %>%
+  dplyr::summarise(sd = sd(accuracy), accuracy = mean(accuracy) )
+
+ggplot(result, aes(x = biopsy.size, y = accuracy)) +
+  geom_col() + 
+  geom_errorbar(ymin = result$accuracy - result$sd, 
+                ymax = result$accuracy + result$sd,
+                width = 0.4) +
+  labs(x = "Size of biopsy",
+       y = "Percent of biopsies in correct PGDIS class") + 
+  scale_x_continuous(breaks = seq(0, 50, 5)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  coord_cartesian(ylim = c(0, 100)) +
+  theme_classic()
+
+```
 
 # What does a biopsy tell us?
 
