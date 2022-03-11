@@ -1336,7 +1336,7 @@ ggplot(clumpy.embryos.2x5, aes(x = PctBiopsyAneuploid, y = aneuploidy, fill=PctT
             fill=NA, col="white", size=1)+
   geom_rect(xmin=75, xmax=105, ymin=0.775, ymax=1.025,
             fill=NA, col="white", size=1)+
-  scale_fill_viridis_c(breaks = seq(0, 60, 5)) +
+  scale_fill_viridis_c(breaks = seq(0, 60, 10), limits = c(0, 60)) +
   labs(x = "Biopsy aneuploidy",
        y = "Embryo aneuploidy",
        fill = "Percentage\nof biopsies") +
@@ -1345,12 +1345,13 @@ ggplot(clumpy.embryos.2x5, aes(x = PctBiopsyAneuploid, y = aneuploidy, fill=PctT
   theme_classic() +
   facet_wrap(~dispersal)
 
+heatmap.1x5 / heatmap.1x10 / heatmap.2x5 + plot_annotation(tag_levels = c("A"))
 
 ```
 
 The impact on PGDIS classifications is as follows:
 
-```{r, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.height=3, fig.cap="PGDIS classes cannot be reliably inferred from biopsy results" }
+```{r pgdis_2x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=3, fig.cap="PGDIS classes cannot be reliably inferred from biopsy results. Comparison of low, mid and high dispersals." }
 
 pgdis.totals.2x5 = clumpy.embryos.2x5 %>%
   dplyr::mutate(EmbryoClass = to.pgdis.class(aneuploidy*100)) %>%
@@ -1359,16 +1360,17 @@ pgdis.totals.2x5 = clumpy.embryos.2x5 %>%
   dplyr::summarise(Total = sum(PctTotal)) %>%
   dplyr::mutate(BiopsyClass = to.pgdis.class(PctBiopsyAneuploid)) %>%
   dplyr::mutate(BiopsyClass = factor(BiopsyClass, levels = pgdis.classes)) %>%
-  dplyr::mutate(IsCorrect = EmbryoClass==BiopsyClass)
+  dplyr::mutate(IsCorrect = EmbryoClass==BiopsyClass) %>%
+  dplyr::filter(IsCorrect==T)
 
 ggplot(pgdis.totals.2x5, aes(x = PctBiopsyAneuploid, y= Total,  fill=IsCorrect))+
   geom_hline(yintercept = 50) +
   geom_col(position="stack") +
-  scale_fill_manual(values = c("grey", "dark green")) +
+  scale_fill_manual(values = c("dark green")) +
   # scale_colour_viridis_d()+
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   scale_y_continuous(breaks = seq(0, 100, 20)) +
-  labs(y = "Percentage of embryos matching biopsy class",
+  labs(y = "Percentage of embryos\nmatching biopsy class",
        x = "Biopsy aneuploidy") +
   facet_wrap(~dispersal) +
   theme_classic()+
@@ -1376,6 +1378,96 @@ ggplot(pgdis.totals.2x5, aes(x = PctBiopsyAneuploid, y= Total,  fill=IsCorrect))
 ```
 
 There is an improvement versus a 1x5 biopsy, but not clearly greater than that provided by a 1x10 biopsy, suggesting repeated biopsying is not an effective solution to the mosaicism problem; unless a biopsy is fully euploid or fully aneuploid, we conclude that it should not be considered informative as to the state of the embryo proper.
+
+
+# Validations
+
+The results of sampling a fully dispersed embryo should follow a hypergeometric distribution (sampling without replacement). We can make a simple simulation of this.
+
+```{r validate_hyper, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=6, fig.width=7, fig.cap="At high dispersal, biopsy results (bars) reflect the hypergeometric distribution (green line)" }
+
+
+make.hyper = function(prop.aneuploid){
+  k = 5
+  x = 0:k # number of aneuploid cells drawn (white)
+  m = 200 * prop.aneuploid # number of white cells
+  n = 200 - m  # number of black cells
+  data.frame(n.aneuploid = x * 20 ,
+            probability = dhyper(x, m, n, k) * 100,
+            prop.aneuploid = prop.aneuploid) # density
+}
+
+hyperg = do.call(rbind, lapply(seq(0.1, 0.9, 0.1), make.hyper))
+
+
+compare.hyper.to.actual = function(prop.aneuploid){
+
+  
+  b = c()
+  for(s in 1:n.replicates){
+    e = tessera::Embryo(n.cells = 200,
+                        prop.aneuploid = prop.aneuploid,
+                        dispersal = 1,
+                        concordance = 1, rng.seed = s)
+    b = c(b, tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1))
+  }
+  # actual.plot = plot.biopsy.aneuploidy(b, 5, 20)
+  
+  pct.biopsy.aneuploid = b / 5 * 100
+  as.data.frame(pct.biopsy.aneuploid) %>%
+    dplyr::group_by(pct.biopsy.aneuploid) %>%
+    dplyr::summarise(n = dplyr::n()) %>%
+    dplyr::mutate(PctBiopsies = n/sum(n)*100,
+                  prop.aneuploid = prop.aneuploid)
+
+}
+
+
+biopsy.data = do.call(rbind, lapply(seq(0.1, 0.9, 0.1), compare.hyper.to.actual))
+
+# Number of biopsies
+ggplot(biopsy.data, aes(x=pct.biopsy.aneuploid, y = PctBiopsies)) +
+  geom_col() +
+  geom_line(data = hyperg, aes(x = n.aneuploid, y = probability), 
+            color = "dark green", size = 2) +
+  coord_cartesian(xlim = c(-5, 100), 
+                  ylim = c(0, 60)) +
+  scale_x_continuous(breaks = seq(0, 100, 20)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) + 
+  labs(x = "Percent aneuploid cells",
+       y = "Percentage of biopsies") +
+  facet_wrap(~prop.aneuploid, ncol = 3) +
+  theme_classic()
+
+
+
+# (compare.hyper.to.actual(0.1) + compare.hyper.to.actual(0.2) + compare.hyper.to.actual(0.3)) /
+#   (compare.hyper.to.actual(0.4) + compare.hyper.to.actual(0.5) + compare.hyper.to.actual(0.6)) /
+#   (compare.hyper.to.actual(0.7) + compare.hyper.to.actual(0.8) + compare.hyper.to.actual(0.9)) + plot_annotation(tag_levels = c("A"))
+
+```
+
+We see that there is good agreement between the expected theoretical hypergeometric distribution and the actual biopsy results, giving us confidence that the dispersal parameter is evenly distributing aneuploid cells.
+
+At the other end of the dispersal scale, we can check that for an unrealistically large embryo of 10,000 cells, if the aneuploid cells are clustered, we should get predominantly fully euploid or aneuploid biopsies.
+
+```{r validate_cluster, eval=T, echo=FALSE, warning=F, message=F, cache=T, fig.show='hold', fig.height=3, fig.width=7, fig.cap="At low dispersal, cells are remaining clustered as expected" }
+e10k = Embryo(n.cells = 10000, dispersal = 0)
+b10k = data.frame(n.aneuploid = tessera::takeAllBiopsies(e10k, biopsy.size = 5, chromosome = 1)) %>%
+  dplyr::group_by(n.aneuploid) %>%
+  dplyr::summarise(Pct = dplyr::n()/100)
+
+ggplot(b10k, aes(x = n.aneuploid, y = Pct)) +
+  geom_col()+
+  labs(x = "Number of aneuploid cells in biopsy",
+       y = "Percent of biopsies") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  scale_x_continuous(breaks = 0:5) +
+  coord_cartesian(ylim = c(0, 100)) + 
+  theme_classic()
+
+```
+This is seen, with a small number of mosaic biopsies at the junction between the euploid and aneuploid cell region.
 
 # Caveats and limitations
 
