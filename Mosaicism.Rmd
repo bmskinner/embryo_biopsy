@@ -25,7 +25,7 @@ library(patchwork)
 library(htmlwidgets)
 
 biopsy.delta = 19
-n.replicates = 50
+n.replicates = 5
 n.cores = ifelse(Sys.info()["sysname"]=="Windows", 1, 20) # parallel only works on Unix-like
 
 pgdis.classes = factor(c("Euploid", "Low level", "High level", "Aneuploid"), 
@@ -258,7 +258,7 @@ The accuracy score for this embryo is `r acc[["mean"]]`, with a standard deviati
 
 We can now show how accuracy varies as we increase the aneuploidy level from 0% to 100%:
 
-```{r, echo=F, warning=F, message=F, cache=T, fig.show = 'hold', fig.cap="Accuracy is lowest when half the embryo is aneuploid (animated gif)"}
+```{r aneuploidy_effect, echo=F, warning=F, message=F, cache=T, fig.show = 'hold', fig.cap="Accuracy is lowest when half the embryo is aneuploid (animated gif)"}
 make.aneuploidy.plot = function(aneuploidy){
   e = tessera::Embryo(n.cells = 200,
                     n.chrs = 1,
@@ -288,26 +288,7 @@ knitr::include_graphics("Aneuploidy.gif")
 
 The bar plots above are useful, but we would cycle through several plots to see the impact of altering a single variable. Another way to represent this data is through cumulative plots of embryo accuracy. Here we show the effect of increasing embryo aneuploidy from 0% to 50% (omitting 50%-100% because they roughly mirror the former). Higher values to the left are better:
 
-```{r, echo=FALSE, cache=T, fig.show='hold', fig.cap="Embryos with high dispersal of aneuploid cells"}
-
-# aneuploidies = seq(0, 0.5, 0.1)
-# result = do.call(rbind, mclapply(aneuploidies, function(prop.aneuploid){
-#   
-#   e = tessera::Embryo(n.cells = 200,
-#                       n.chrs = 1,
-#                       prop.aneuploid = prop.aneuploid,
-#                       dispersal = 1,
-#                       concordance = 1, rng.seed = 44)
-#   b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
-#   acc = calculate.difference(b, 5, prop.aneuploid*100)
-#   
-#   
-#   cbind(anuploidy = rep(prop.aneuploid, length(acc[["values"]])), 
-#         accuracy = round(acc[["values"]]))
-# }, mc.cores = n.cores))
-# 
-# plot.step(result, "Aneuploidy", aneuploidies)
-
+```{r aneuploidy_step, echo=FALSE, cache=T, fig.show='hold', fig.cap="Embryos with high dispersal of aneuploid cells"}
 combinations = expand.grid(aneuploidies = seq(0, 0.5, 0.1),
                            seeds = 1:n.replicates)
 
@@ -780,10 +761,72 @@ These data are noisy, with a repeating pattern every 5 cells due to the hard bou
 
 ## Variability in embryo and biopsy size
 
-So far we have been using embryos and biopsies with exact sizes. In reality, there may be variation - the size of an embryo may be estimated inexactly, and a biopsy may contain +/- a cell, due to the difficulties in taking biopsies. We can add some of this uncertainty to the model by allowing our embryo and biopsy sizes to vary from their target under a normal distribution.
+So far we have been using embryos and biopsies with exact sizes. In reality, there may be variation - the size of an embryo may be estimated inexactly, and a biopsy may contain +/- a cell, due to the difficulties in taking biopsies. We can add some of this uncertainty to the model by allowing our biopsy sizes to vary from their target under a normal distribution. With this capability, we can now show the effect of increasing variability in biopsy size on the biopsy results.
+
+```{r biopsy_sd, eval=T, echo=FALSE, message=F, cache=T, fig.show='hold', fig.height=3, fig.cap=paste("Increasing biopsy size variability has little impact on biopsy results. Data from", n.replicates, "replicates. A) Effect of changing standard deviation on biopsy size; B) Effect of changing standard deviation on biopsy results")}
 
 
-```{r, eval=T, echo=FALSE, cache=T, fig.show='hold', fig.cap="Biopsy size does not drastically affect the accuracy of the biopsy beyond about 5% of the embryo"}
+# embryo.sizes = sapply(1:100, function(x){ 
+#   length(Embryo(n.cells = 200, embryo.size.fixed = F, embryo.size.sd = 5 ))
+# })
+# 
+# hist(embryo.sizes)
+
+biopsy.sds = do.call(rbind, lapply(seq(0.1, 2, 0.1), function(i){
+  cbind(sd = i, p = pnorm(0:10, mean=5, sd=i), n.cells = 0:10)
+})) %>% as.data.frame
+
+biopsy.sd.plot = ggplot(biopsy.sds, aes(x = n.cells, y = p, col = sd, group = sd ))+
+  geom_line(size = 2)+
+  scale_colour_viridis_c() + 
+  scale_x_continuous(breaks = 0:10) +
+  labs(x = "Cells in biopsy",
+       y = "Cumulative probability") +
+  theme_classic()
+
+
+combinations = expand.grid(biopsy.sd = seq(0, 2, 0.1),
+                           seeds   = 1:n.replicates)
+result = do.call(rbind, mcmapply(function(biopsy.sd, seed){
+
+  e = tessera::Embryo(n.cells = 200,
+                      prop.aneuploid = 0.2,
+                      dispersal = 1,
+                      concordance = 1, 
+                      rng.seed = seed)
+  b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1, biopsy.size.fixed = F,
+                               biopsy.size.sd = biopsy.sd)
+  
+  cbind(biopsy.sd   = biopsy.sd, 
+        n.aneuploid = b,
+        seed = seed)
+}, 
+biopsy.sd = combinations$biopsy.sd,
+seed      = combinations$seeds,
+mc.cores = n.cores, SIMPLIFY = F)) %>% as.data.frame
+
+filt = result %>% dplyr::group_by(biopsy.sd, n.aneuploid) %>%
+  dplyr::summarise(Count = dplyr::n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(biopsy.sd) %>%
+  dplyr::mutate(Total = sum(Count),
+                PctTotal = Count / sum(Count) * 100)
+
+biopsy.sd.result.plot = ggplot(filt, aes(x = n.aneuploid, y = PctTotal, col = biopsy.sd, group = biopsy.sd))+
+  geom_line(size = 2) +
+  scale_colour_viridis_c() + 
+  scale_y_continuous(breaks = seq(0, 100, 5)) +
+  labs(x = "Number of aneuploid cells in biopsy",
+       y = "Percent of biopsies",
+       col = "Biopsy SD") + 
+  theme_classic()
+
+biopsy.sd.plot + biopsy.sd.result.plot + plot_annotation(tag_levels = c("A"))
+
+```
+We see that there is only a minimal impact of increasing biopsy size variability to the biopsy results.
+
+```{r biopsy_size, eval=T, echo=FALSE, cache=T, fig.show='hold', fig.cap="Biopsy size does not drastically affect the accuracy of the biopsy beyond about 5% of the embryo"}
 
 combinations = expand.grid(samples = seq(3, 31, 1),
                            seeds   = 1:n.replicates)
@@ -1485,5 +1528,9 @@ This is clearly a simple model using a toy embryo. The predictive power is limit
  
 # TODO
  
+ - add embryo size variability
+ - add biopsy size variability
+ - sequencing depth consideration
+ - Bayesian framework
  - develop reverse lookup tool in tessera
 
