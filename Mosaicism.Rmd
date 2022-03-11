@@ -174,7 +174,7 @@ In the first stage of the model, we alter the embryo parameters to find the effe
 
 We start by creating a single embryo of 200 cells, with a 20% aneuploidy rate (40 aneuploid cells). The aneuploid cells are highly dispersed throughout the embryo; it is unlikely, though not impossible, that two aneuploid cells will be adjacent.
 
-```{r, echo=F, warning=F, fig.show="hold", fig.cap="Example 200 cell embryo with 20% aneuploidy, dispersed"}
+```{r first_embryo, echo=F, warning=F, fig.show="hold", fig.cap="Example 200 cell embryo with 20% aneuploidy, dispersed"}
 e = tessera::Embryo(n.cells = 200, 
                     n.chrs = 1,
                     prop.aneuploid = 0.2, 
@@ -182,33 +182,34 @@ e = tessera::Embryo(n.cells = 200,
                     concordance = 1, 
                     rng.seed = 44)
 
-
-plot(e)
-
-# # Save viewer settings (e.g. RStudio viewer pane)
-# op <- options()
-# 
-# # Set viewer to web browser
-# options(viewer = NULL)
-# 
-# # Use web browser to save image
-# plot.embryo(e) %>% htmlwidgets::onRender(
-#   "function(el, x) {
-#   var gd = document.getElementById(el.id); 
-#   Plotly.downloadImage(gd, {format: 'png', width: 720, height: 480, filename: 'e1'});
-#   }"
-#  )
-# 
-# # Restore viewer to old setting (e.g. RStudio)
-# options(viewer = op$viewer)
-
-# knitr::include_graphics("e1.png")
+if (knitr:::is_html_output()){ 
+  plot(e) 
+} else{
+  # # Save viewer settings (e.g. RStudio viewer pane)
+  # op <- options()
+  # 
+  # # Set viewer to web browser
+  # options(viewer = NULL)
+  # 
+  # # Use web browser to save image
+  # plot.embryo(e) %>% htmlwidgets::onRender(
+  #   "function(el, x) {
+  #   var gd = document.getElementById(el.id); 
+  #   Plotly.downloadImage(gd, {format: 'png', width: 720, height: 480, filename: 'e1'});
+  #   }"
+  #  )
+  # 
+  # # Restore viewer to old setting (e.g. RStudio)
+  # options(viewer = op$viewer)
+  
+  knitr::include_graphics("e1.png")
+}
 
 ```
 
 Now to explore the possible biopsies from this embryo. We will take 5-cell biopsies, starting at each cell in turn. A biopsy is composed of the starting cell and its four closest neighbours. This reveals the range of possible biopsies we could obtain.
 
-```{r, echo=F, fig.cap="Percentage of aneuploid cells in each biopsy"}
+```{r first_embryo_biopsies, echo=F, fig.cap="Percentage of aneuploid cells in each biopsy"}
 
 b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
 
@@ -223,7 +224,7 @@ We need a measure that can capture the overall accuracy of the biopsy. This can 
 
 Now contrast this with an embryo that has the same aneuploidy rate of 20%, but with low dispersal of the aneuploid cells. Now it is very likely that an aneuploid cell has another aneuploid cell adjacent:
 
-```{r, echo=F, warning=F, fig.show="hold", fig.cap="Example 200 cell embryo with 20% aneuploidy, clustered"}
+```{r second_embryo, echo=F, warning=F, fig.show="hold", fig.cap="Example 200 cell embryo with 20% aneuploidy, clustered"}
 e = tessera::Embryo(n.cells = 200, 
                     n.chrs = 1,
                     prop.aneuploid = 0.2, 
@@ -231,14 +232,17 @@ e = tessera::Embryo(n.cells = 200,
                     concordance = 1, 
                     rng.seed = 42)
 
-plot(e)
-# knitr::include_graphics("e2.png")
+if(knitr:::is_html_output()){ 
+  plot(e) 
+} else {
+  knitr::include_graphics("e2.png")
+}
 
 ```
 
 The aneuploid cells are in a discrete patch in the embryo, and the distribution of possible 5-cell biopsies changes:
 
-```{r, echo=F, fig.cap="Percentage of aneuploid cells in each biopsy"}
+```{r second_embryo_biopsies, echo=F, fig.cap="Percentage of aneuploid cells in each biopsy"}
 
 b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
 
