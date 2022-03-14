@@ -117,7 +117,7 @@ plot.step =  function(result, variable.name, variable.values){
 to.pgdis.class = function(pct.aneuploidy){
   if(pct.aneuploidy<20) return("Euploid")
   if(pct.aneuploidy<40) return("Low level")
-  if(pct.aneuploidy<80) return("High level")
+  if(pct.aneuploidy<=80) return("High level")
   return("Aneuploid")
 }
 
@@ -1103,6 +1103,11 @@ clumpy.embryos.1x5 = result %>%
   dplyr::mutate(PctTotal = Count/CountBiopsy * 100) %>%
   dplyr::filter(dispersal %in% c(0, 0.5, 1))
 
+```
+
+
+```{r heatmap-1x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height= 3, fig.cap="Confidently relating biopsy aneuploidy to embryo aneuploidy is only possible if dispersal is high. White boxes show PGDIS classification boundaries." }
+
 heatmap.1x5 = ggplot(clumpy.embryos.1x5, aes(x = PctBiopsyAneuploid, y = aneuploidy, fill=PctTotal))+
   geom_tile() +
   # geom_text(aes(label =  sprintf(PctTotal, fmt = '%#.0f')))+
@@ -1110,18 +1115,18 @@ heatmap.1x5 = ggplot(clumpy.embryos.1x5, aes(x = PctBiopsyAneuploid, y = aneuplo
             fill=NA, col="white", size=1)+
   geom_rect(xmin=10, xmax=30, ymin=0.175, ymax=0.375, 
             fill=NA, col="white", size=1)+
-  geom_rect(xmin=30, xmax=70, ymin=0.375, ymax=0.775, 
+  geom_rect(xmin=30, xmax=90, ymin=0.375, ymax=0.825, 
             fill=NA, col="white", size=1)+
-  geom_rect(xmin=70, xmax=110, ymin=0.775, ymax=1.025, 
+  geom_rect(xmin=90, xmax=110, ymin=0.825, ymax=1.025, 
             fill=NA, col="white", size=1)+
-  scale_fill_viridis_c(breaks = seq(0, 100, 10), limits = c(0, 90)) +
+  scale_fill_viridis_c(breaks = seq(0, 100, 10), limits = c(0, 60)) +
   labs(x = "Biopsy aneuploidy",
        y = "Embryo aneuploidy",
        fill = "Percentage\nof biopsies") +
   scale_y_continuous(breaks = seq(0, 1, 0.1)) +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   theme_classic() + 
-  facet_wrap(~dispersal)
+  facet_wrap(~dispersal, ncol = 3, labeller = labeller(dispersal = disp.labels))
 
 heatmap.1x5
   
@@ -1143,18 +1148,22 @@ pgdis.totals.1x5 = clumpy.embryos.1x5 %>%
   dplyr::mutate(IsCorrect = EmbryoClass==BiopsyClass) %>%
   dplyr::filter(IsCorrect==T)
 
-ggplot(pgdis.totals.1x5, aes(x = PctBiopsyAneuploid, y= Total,  fill=IsCorrect))+
+pgdis.plot.1x5 = ggplot(pgdis.totals.1x5, aes(x = PctBiopsyAneuploid, y= Total,  fill=IsCorrect))+
   geom_hline(yintercept = 50) +
   geom_col(position="stack") +
   scale_fill_manual(values = c("dark green")) +
   # scale_colour_viridis_d()+
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   scale_y_continuous(breaks = seq(0, 100, 20)) +
+  coord_cartesian(ylim = c(0, 100)) + 
   labs(y = "Percentage of embryos\nmatching biopsy class",
        x = "Biopsy aneuploidy") +
-  facet_wrap(~dispersal) +
+  facet_wrap(~dispersal, ncol = 3, labeller = labeller(dispersal = disp.labels)) +
   theme_classic() +
   theme(legend.position = "none")
+
+pgdis.plot.1x5
+
 ```
 
 
@@ -1207,24 +1216,28 @@ clumpy.embryos.1x10 = result.1x10 %>%
   dplyr::mutate(PctTotal = Count/CountBiopsy * 100) %>%
   dplyr::filter(dispersal %in% c(0, 0.5, 1))
 
+```
+
+```{r heatmap-1x10, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height= 3, fig.cap="Biopsy aneuploidy correlation with embryo for 1x10 biopsies" }
+
 heatmap.1x10 = ggplot(clumpy.embryos.1x10, aes(x = PctBiopsyAneuploid, y = aneuploidy, fill=PctTotal))+
   geom_tile() +
   geom_rect(xmin=-5, xmax=15, ymin=-0.025, ymax=0.175, 
             fill=NA, col="white", size=1)+
   geom_rect(xmin=15, xmax=35, ymin=0.175, ymax=0.375, 
             fill=NA, col="white", size=1)+
-  geom_rect(xmin=35, xmax=75, ymin=0.375, ymax=0.775, 
+  geom_rect(xmin=35, xmax=85, ymin=0.375, ymax=0.825, 
             fill=NA, col="white", size=1)+
-  geom_rect(xmin=75, xmax=105, ymin=0.775, ymax=1.025, 
+  geom_rect(xmin=85, xmax=105, ymin=0.825, ymax=1.025, 
             fill=NA, col="white", size=1)+
-  scale_fill_viridis_c(breaks = seq(0, 100, 10), limits = c(0, 90)) +
+  scale_fill_viridis_c(breaks = seq(0, 100, 10), limits = c(0, 60)) +
   labs(x = "Biopsy aneuploidy",
        y = "Embryo aneuploidy",
        fill = "Percentage\nof biopsies") +
   scale_y_continuous(breaks = seq(0, 1, 0.1)) +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   theme_classic() + 
-  facet_wrap(~dispersal)
+  facet_wrap(~dispersal, ncol = 3, labeller = labeller(dispersal = disp.labels))
 
 heatmap.1x10
 
@@ -1375,24 +1388,24 @@ clumpy.embryos.2x5 = result.2x5 %>%
   dplyr::filter(dispersal %in% c(0, 0.5, 1))
 
 heatmap.2x5 = ggplot(clumpy.embryos.2x5, aes(x = PctBiopsyAneuploid, y = aneuploidy, fill=PctTotal))+
-  geom_tile() +
-  # geom_text(aes(label =  sprintf(PctTotal, fmt = '%#.0f')))+
+  geom_tile(data = zero.data, aes(fill = Count)) + # draw zero data first as base
+  geom_tile() +                                    # then add real data on top
   geom_rect(xmin=-5, xmax=15, ymin=-0.025, ymax=0.175,
             fill=NA, col="white", size=1)+
   geom_rect(xmin=15, xmax=35, ymin=0.175, ymax=0.375,
             fill=NA, col="white", size=1)+
-  geom_rect(xmin=35, xmax=75, ymin=0.375, ymax=0.775,
+  geom_rect(xmin=35, xmax=85, ymin=0.375, ymax=0.825,
             fill=NA, col="white", size=1)+
-  geom_rect(xmin=75, xmax=105, ymin=0.775, ymax=1.025,
+  geom_rect(xmin=85, xmax=105, ymin=0.825, ymax=1.025,
             fill=NA, col="white", size=1)+
-  scale_fill_viridis_c(breaks = seq(0, 100, 10), limits = c(0, 90)) +
+  scale_fill_viridis_c(breaks = seq(0, 100, 10), limits = c(0, 60)) +
   labs(x = "Biopsy aneuploidy",
        y = "Embryo aneuploidy",
        fill = "Percentage\nof biopsies") +
   scale_y_continuous(breaks = seq(0, 1, 0.1)) +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   theme_classic() +
-  facet_wrap(~dispersal)
+  facet_wrap(~dispersal, ncol = 3, labeller = labeller(dispersal = disp.labels))
 
 heatmap.1x5 / heatmap.1x10 / heatmap.2x5 + plot_annotation(tag_levels = c("A"))
 
@@ -1400,7 +1413,7 @@ heatmap.1x5 / heatmap.1x10 / heatmap.2x5 + plot_annotation(tag_levels = c("A"))
 
 The impact on PGDIS classifications is as follows:
 
-```{r pgdis-2x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=3, fig.cap="PGDIS classes cannot be reliably inferred from biopsy results. Comparison of low, mid and high dispersals." }
+```{r pgdis-2x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=9, fig.cap="PGDIS classes cannot be reliably inferred from biopsy results. Comparison of low, mid and high dispersals across (A) 1x5; (B) 1x10 and (C) 2x5." }
 
 pgdis.totals.2x5 = clumpy.embryos.2x5 %>%
   dplyr::mutate(EmbryoClass = to.pgdis.class(aneuploidy*100)) %>%
