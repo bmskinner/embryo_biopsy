@@ -8,9 +8,10 @@ EmbryoBiopsy*
 *.Rproj
 *.png
 *.tsv
-*.csv
 *.gif
 *.html
 *.docx
 *_cache/*
+/data/*
+*.csv
 
