@@ -61,7 +61,7 @@ read.rds.data = function(name){
 ```
 
 
-## Pre-implantation genetic diagnosis (PGD)
+## 1990s: Pre-implantation genetic diagnosis (PGD)
 
 - Detect genetic disease in embryos e.g. cystic fibrosis ΔF508
 
@@ -75,7 +75,7 @@ knitr::include_graphics("Slide_figures/cf_diagnosis.png")
 ```
 </div>
 
-## Pre-implantation genetic diagnosis (PGD)
+## 1990s: Pre-implantation genetic diagnosis (PGD)
 
 <div class="centered">
 ```{r, out.width="50%", out.height="50%", echo=F}
@@ -85,7 +85,7 @@ knitr::include_graphics("Slide_figures/8_cell_embryo.jpg")
 
 - biopsy single cell, PCR for allele of interest
 
-## FISH for specific chromosome
+## 1990s: FISH for specific chromosome
 
 e.g. X-linked recessive disorder
 
@@ -97,7 +97,7 @@ knitr::include_graphics("Slide_figures/X_PGD.jpg")
 
 
 
-## Assay aneuploidy - multicolour FISH
+## 2000s: Assay aneuploidy - e.g. multicolour FISH
 
 <div class="centered">
 ```{r, out.width="50%", out.height="50%", echo=F}
@@ -105,7 +105,7 @@ knitr::include_graphics("Slide_figures/Multi-colour_PGS.PNG")
 ```
 </div>
 
-## Measure all the things
+## 2000s: Measure all the things
 
 - Microarrays (CGH, SNPs), and later sequencing
 - But now DNA amplification is needed
@@ -130,7 +130,7 @@ knitr::include_graphics("Slide_figures/Blastocyst.jpg")
 </div>
 
 - Inner cell mass separated from trophectoderm
-- Biopsy 5 cells from trophectoderm
+- Biopsy ~5 cells from trophectoderm
 
 
 
@@ -153,14 +153,17 @@ BUT
 
 ## The question(s)
 
-
+<div class="centered">
 How well does a mosaic biopsy represent an embryo?
 
-Are biopsies really useful?
+What can we confidently interpret from a biopsy?
+
 
 _Solution_:
 
-Create a toy embryo that we can repeatedly biopsy 
+Create a virtual embryo that we can repeatedly biopsy 
+
+</div>
 
 ## Segue through the sunflowers
 
@@ -259,6 +262,8 @@ plot.biopsy.aneuploidy(b, 5, 0.2)
 - dispersal
 
 - biopsy size
+
+- number of biopsies
 
 ## Effect of changing aneuploidy (high dispersal)
 
@@ -377,7 +382,7 @@ heatmap.1x10
 
 ## Or two 5-cell biopsies?
 
-- Not great either
+- Not much difference to a 10-cell biopsy
 
 <div class="centered">
 ```{r heatmap-2x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.height=4, fig.width=10 }
@@ -389,7 +394,7 @@ heatmap.2x5
 
 ## What this means for accuracy
 
-- A biopsy is not useful in predicting an individual embryo's state
+- A biopsy is limited in predicting an individual embryo's state
 
 <div class="centered">
 ```{r pgdis-2x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.height=5 }
@@ -413,8 +418,11 @@ BUT
 
 ## Acknowledgements
 
-- Darren Griffin
+- Darren Griffin, University of Kent
 
-- Peter Ellis
+- Peter Ellis, University of Kent
+
+
+Model available at reproduction.essex.ac.uk
 
 
