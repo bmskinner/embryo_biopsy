@@ -14,7 +14,7 @@ output:
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, echo=F, message=F}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, cache.lazy = F)
 library(tessera)
 library(magrittr)
 library(dplyr)
@@ -212,6 +212,7 @@ if (knitr:::is_html_output()){
   # 
   # # Restore viewer to old setting (e.g. RStudio)
   # options(viewer = op$viewer)
+  
   
   knitr::include_graphics("e1.png")
 }
@@ -1459,7 +1460,7 @@ save.seed.range = function(start, end, file, n.cells){
 for(n.cells in seq(150, 250, 50)){
   for(start in seq(1, max(1, n.replicates-9), 10)){ # replicates must be multiple of 10
     end = ifelse(n.replicates<10, n.replicates, start + 9)
-    file = paste0("2x5_", n.cells, "cells_", n.replicates, "rep_", start, "-", end, ".csv")
+    file = paste0("outputs/2x5_", n.cells, "cells_", n.replicates, "rep_", start, "-", end, ".csv")
     if(!file.exists(file)){
       cat("Creating", file, "\n")
       save.seed.range(start, end, file, n.cells)
@@ -1478,7 +1479,7 @@ zero.data = expand.grid(aneuploidy = seq(0, 1, 0.05),
                         PctBiopsyAneuploid  = seq(0, 100, 10),
                         Count = 0)
 
-result.2x5 = do.call(rbind, lapply(list.files(pattern = paste0("2x5_", n.cells, "cells_", n.replicates, "rep_.*.csv")), function(f){read.csv(f, header = T, stringsAsFactors = F)}))
+result.2x5 = do.call(rbind, lapply(list.files(path = "outputs", pattern = paste0("2x5_", n.cells, "cells_", n.replicates, "rep_.*.csv"), full.names = T), function(f){read.csv(f, header = T, stringsAsFactors = F)}))
 
 clumpy.embryos.2x5 = result.2x5 %>%
   dplyr::group_by(PctBiopsyAneuploid, aneuploidy, dispersal) %>%
@@ -1739,7 +1740,7 @@ calc.multicell.heatmap = function(embryo.size){
                           PctBiopsyAneuploid  = seq(0, 100, 10),
                           Count = 0)
   
-  result.2x5.150 = do.call(rbind, lapply(list.files(pattern = paste0("2x5_", embryo.size, "cells_", n.replicates, "rep_.*.csv")), function(f){read.csv(f, header = T, stringsAsFactors = F)}))
+  result.2x5.150 = do.call(rbind, lapply(list.files(path = "outputs", pattern = paste0("2x5_", embryo.size, "cells_", n.replicates, "rep_.*.csv"), full.names = T), function(f){read.csv(f, header = T, stringsAsFactors = F)}))
   
   clumpy.embryos.2x5.150 = result.2x5.150 %>%
     dplyr::group_by(PctBiopsyAneuploid, aneuploidy, dispersal) %>%
