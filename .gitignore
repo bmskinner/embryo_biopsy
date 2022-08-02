@@ -5,6 +5,7 @@
 .Rbuildignore
 *.xls*
 EmbryoBiopsy*
+*.RData
 *.Rproj
 *.png
 *.tsv
@@ -12,6 +13,7 @@ EmbryoBiopsy*
 *.html
 *.docx
 *_cache/*
+cache/*
 /data/*
 *.csv
 
