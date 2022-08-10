@@ -15,5 +15,5 @@ EmbryoBiopsy*
 *_cache/*
 cache/*
 /data/*
-*.csv
+outputs/*
 
