@@ -14,7 +14,7 @@ output:
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, echo=F, message=F}
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, cache.lazy = F, cache=F)
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache.lazy = F, cache=F)
 library(tessera)
 library(magrittr)
 library(dplyr)
@@ -26,7 +26,9 @@ library(htmlwidgets)
 library(patchwork)
 
 biopsy.delta = 19
-N.REPLICATES = 1000 # number of embryos to generate for each parameter combination
+ANEUPLOIDY.RANGE = seq(0, 1, 0.01)
+DISPERSAL.RANGE = seq(0, 1, 0.01)
+N.REPLICATES = 100 # number of embryos to generate for each parameter combination
 n.cells = 200 # number of cells in TE for base analysis
 N.CORES = ifelse(Sys.info()["sysname"]=="Windows", 1, 20) # parallel only works on Unix-like
 
@@ -142,6 +144,34 @@ pgdis.accuracy = function(n.aneuploid, biopsy.size, actual.aneuploidy.pct){
       dplyr::summarise(Count = dplyr::n()) %>%
       dplyr::mutate(Pct = Count / length(d) * 100) %>%
       dplyr::filter(Class == actual.class))$Pct
+}
+
+
+
+# Determine whether a biopsy was 'useful'
+was.useful.biopsy = function(actual.pct, biopsy.pct){
+  
+  # the biopsy should be at or above the embryo class
+  actual.class = to.pgdis.class(actual.pct)
+  biopsy.class = sapply(biopsy.pct, to.pgdis.class)
+  
+  if(actual.class == "Aneuploid"){
+    return(biopsy.class=="Aneuploid")
+  }
+  
+  if(actual.class == "High level"){
+    return(biopsy.class=="High level" | biopsy.class=="Aneuploid")
+  }
+  
+  # Not too high
+  if(actual.class == "Low level"){
+    return(biopsy.class=="Low level" | biopsy.class=="High level" )
+  }
+  
+  if(actual.class == "Euploid"){
+    return(biopsy.class=="Euploid")
+  }
+  
 }
 
 
@@ -319,7 +349,7 @@ The bar plots above are useful, but we would cycle through several plots to see 
 # Simulation with fixed high dispersal and variable aneuploidy
 high.dispersal.result = read.data("high.dispersal.result", function(){
   
-  combinations = expand.grid(aneuploidies = seq(0, 0.5, 0.1),
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
                              seeds = 1:N.REPLICATES)
   
   result = do.call(rbind, mcmapply(function(prop.aneuploid, seed){
@@ -391,7 +421,7 @@ We can see that at 10% aneuploidy, a little over half the biopsies match the emb
 
 pgdis.accuracy.by.aneuploidy = read.data("pgdis.accuracy.by.aneuploidy", function(){
   
-  combinations = expand.grid(aneuploidies = seq(0.0, 1, 0.05),
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
                              seeds = 1:N.REPLICATES)
   
   result = do.call(rbind, mcmapply(function(prop.aneuploid, seed){
@@ -476,7 +506,7 @@ We see that changing the dispersal of the aneuploid cells also impacts the biops
 
 dispersal.step.data = read.data("dispersal.step.data", function(){
   
-  combinations = expand.grid(dispersals = seq(0, 1, 0.05),
+  combinations = expand.grid(dispersals = DISPERSAL.RANGE,
                              seeds = 1:N.REPLICATES)
   
   result = do.call(rbind, mcmapply(function(dispersal, seed){
@@ -511,7 +541,7 @@ To confirm this, we show below the effect of increasing dispersal from low to hi
 
 make.dispersal.aneuploidy.plot = function(dispersal){
   
-  combinations = expand.grid(aneuploidies = seq(0, 0.5, 0.05),
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
                              seeds = 1:N.REPLICATES)
   
   result = do.call(rbind, mcmapply(function(prop.aneuploid, seed){
@@ -579,7 +609,7 @@ We see that dispersal has a significant impact on biopsy results, with dispersed
 
 dispersal.pgdis.data = read.data("dispersal.pgdis.data", function(){
   
-  combinations = expand.grid(dispersals = seq(0.0, 1, 0.05),
+  combinations = expand.grid(dispersals = DISPERSAL.RANGE,
                              seeds = 1:N.REPLICATES)
   
   do.call(rbind, mcmapply(function(dispersal, seed){
@@ -621,12 +651,12 @@ dispersal.pgdis.plot
 
 The interaction between aneuploidy level and dispersal reveals that PGDIS classification accuracy is dramatically affected by low dispersal, but only for intermediate levels of aneuploidy, and most dramatically at 20-30% aneuploidy - an important range in clinical consideration. We also see the impact of hard thresholds on accuracy of classification, with far lower accuracy in the low-level mosaic category.
 
-```{r dispersal-aneuploidy-pgdis, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.cap="PGDIS classification accuracy by aneuploidy and dispersion level" }
+```{r dispersal-aneuploidy-pgdis, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.cap="PGDIS classification accuracy by aneuploidy and dispersion level. Average of 100 replicates." }
 
 
 dispersal.aneuploidy.pgdis.data = read.data("dispersal.aneuploidy.pgdis.data", function(){
-  combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
-                             dispersals   = seq(0, 1, 0.05),
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                             dispersals   = DISPERSAL.RANGE,
                              seeds        = 1:N.REPLICATES)
   
   # The possible outcomes from all combinations of embryo parameters
@@ -662,9 +692,13 @@ dispersal.aneuploidy.pgdis.plot = read.data("dispersal.aneuploidy.pgdis.plot", f
          fill = "Percentage\nof accurate\nPGDIS\nclassifications") + 
     scale_x_continuous(breaks = seq(0, 100, 10)) +
     scale_y_continuous(breaks = seq(0, 1, 0.1)) +
-    geom_vline(xintercept = 17.5, col="white")+
-    geom_vline(xintercept = 37.5, col="white")+
-    geom_vline(xintercept = 82.5, col="white")+
+    annotate(geom = "text", label = "Euploid", x=10, y=1.06)+
+    annotate(geom = "text", label = "Low", x=30, y=1.06)+
+    annotate(geom = "text", label = "High", x=60, y=1.06)+
+    annotate(geom = "text", label = "Aneuploid", x=90, y=1.06)+
+    geom_vline(xintercept = 19.5, col="white")+
+    geom_vline(xintercept = 39.5, col="white")+
+    geom_vline(xintercept = 80.5, col="white")+
     theme_classic()
 })
 dispersal.aneuploidy.pgdis.plot
@@ -861,6 +895,62 @@ biopsy.size.pgdis.plot =  read.data("biopsy.size.pgdis.plot", function(){
 
 These data are noisy, with a repeating pattern every 5 cells due to the hard boundaries of the PGDIS classifiation scheme. We see though that there is little to no benefit in sampling more than 5-10 cells from an embryo.
 
+```{r biopsy-size-aneuploidy-pgdis-no-sd, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.cap=paste("Biopsy size variation with aneuploidy and dispersal with fixed biopsy size. Mean over", N.REPLICATES, "replicates")}
+biopsy.size.aneuploidy.combination.no.sd.data = read.data("biopsy.size.aneuploidy.combination.no.sd.data", function(){
+  
+  combinations = expand.grid(biopsy.sizes = c(3:10, 15, 20, 25, 30),
+                             aneuploidies = ANEUPLOIDY.RANGE,
+                             dispersals   = DISPERSAL.RANGE,
+                             seeds   = 1:N.REPLICATES)
+  
+  result = do.call(rbind, mcmapply(function(biopsy.size, aneuploidy, dispersal, seed){
+    
+    e = tessera::Embryo(n.cells = 200,
+                        prop.aneuploid = aneuploidy,
+                        dispersal = dispersal,
+                        concordance = 1, rng.seed = seed)
+    b = tessera::takeAllBiopsies(e, biopsy.size = biopsy.size, chromosome = 1)
+    
+    cbind(biopsy.size = rep(biopsy.size, length(b)), 
+          accuracy = pgdis.accuracy(b, biopsy.size, aneuploidy*100),
+          aneuploidy = rep(aneuploidy, length(b)),
+          dispersal  = rep(dispersal, length(b)))
+  }, 
+  biopsy.size = combinations$biopsy.sizes,
+  seed        = combinations$seeds,
+  aneuploidy  = combinations$aneuploidies,
+  dispersal   = combinations$dispersals,
+  mc.cores = N.CORES, SIMPLIFY = F)) 
+  
+  result %>% 
+    as.data.frame %>%
+    dplyr::group_by(biopsy.size, dispersal, aneuploidy) %>%
+    dplyr::summarise(sd = sd(accuracy), accuracy = mean(accuracy) )
+})
+
+biopsy.size.aneuploidy.combination.no.sd.plot = read.data("biopsy.size.aneuploidy.combination.no.sd.plot", function(){
+  
+  ggplot(biopsy.size.aneuploidy.combination.no.sd.data, aes(x = aneuploidy, y = dispersal, fill=accuracy)) +
+    geom_tile() + 
+    labs(x = "Aneuploidy",
+         y = "Dispersal",
+         fill = "Percent of biopsies\nin correct\nPGDIS class") + 
+    scale_fill_viridis_c()+
+    scale_x_continuous(breaks = seq(0, 1, 0.2)) +
+    scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+    geom_vline(xintercept = 0.175, col="white")+
+    geom_vline(xintercept = 0.375, col="white")+
+    geom_vline(xintercept = 0.825, col="white")+
+    coord_cartesian(ylim = c(0, 1)) +
+    facet_wrap(~biopsy.size, ncol = 6) +
+    theme_classic()
+})
+
+biopsy.size.aneuploidy.combination.no.sd.plot
+
+```
+
+
 ## Variability in embryo and biopsy size
 
 So far we have been using embryos and biopsies with exact sizes. In reality, there may be variation - the size of an embryo may be estimated inexactly, and a biopsy may contain +/- a cell, due to the difficulties in taking biopsies. We can add some of this uncertainty to the model by allowing our biopsy sizes to vary from their target under a normal distribution. With this capability, we can now show the effect of increasing variability in biopsy size on the biopsy results.
@@ -1025,8 +1115,8 @@ Why does this sawtooth pattern exist? It is caused - once again - by the hard PG
 biopsy.size.aneuploidy.combination.data = read.data("biopsy.size.aneuploidy.combination.data", function(){
   
   combinations = expand.grid(biopsy.sizes = c(3:10, 15, 20, 25, 30),
-                             aneuploidies = seq(0, 1, 0.05),
-                             dispersals   = seq(0, 1, 0.05),
+                             aneuploidies = ANEUPLOIDY.RANGE,
+                             dispersals   = DISPERSAL.RANGE,
                              seeds   = 1:N.REPLICATES)
   
   result = do.call(rbind, mcmapply(function(biopsy.size, aneuploidy, dispersal, seed){
@@ -1090,8 +1180,8 @@ We return to a fixed biopsy size of 5 cells. This biopsy has a single aneuploid 
 
 embryo.combination.data = read.data("embryo.combination.data", function(){
   
-  combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
-                             dispersals   = seq(0, 1, 0.05),
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                             dispersals   = DISPERSAL.RANGE,
                              seeds   = 1:N.REPLICATES)
   
   # The possible outcomes from all combinations of embryo parameters
@@ -1132,8 +1222,13 @@ If we define embryos with `r N.REPLICATES` replicates of distinct combinations o
 
 ```{r aneuploidy-dispersal-fig, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=3, fig.width=4, fig.cap="Number of biopsies across all embryos with aneuploid cells. A biopsy with 1 aneuploid cell can come from a range of possible embryos."}
 embryo.combination.plot = read.data("embryo.combination.plot", function(){
-  ggplot(as.data.frame(embryo.combination.data), aes(x = n.aneuploid, fill = n.aneuploid==1)) + 
-    geom_bar() + 
+  
+  summarised.data = as.data.frame(embryo.combination.data) %>% 
+    dplyr::group_by(n.aneuploid) %>%
+    dplyr::summarise(Count = n())
+  
+  ggplot(summarised.data, aes(x = n.aneuploid, y=Count, fill = n.aneuploid==1)) + 
+    geom_col() + 
     labs(x = "Number of aneuploid cells in biopsy",
          y = "Number of possible biopsies\nfrom all embryo combinations") + 
     scale_x_continuous(breaks = seq(0, 5, 1)) +
@@ -1149,8 +1244,8 @@ We can now look at the possible embryos that could yield this biopsy. The biopsi
 
 ```{r possible-embryo-fig, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.cap="Possible embryo parameters matching a biopsy with one aneuploid cell"}
 
-zero.data = expand.grid(aneuploidy = seq(0, 1, 0.05),
-                        dispersal  = seq(0, 1, 0.05),
+zero.data = expand.grid(aneuploidy = ANEUPLOIDY.RANGE,
+                        dispersal  = DISPERSAL.RANGE,
                         n.aneuploid = 0:5,
                         Count = 0)
 
@@ -1167,7 +1262,7 @@ matching.biopsies = suppressMessages(output.aneuploidy %>%
 embryo.combination.source.plot = read.data("embryo.combination.source.plot", function(){
   ggplot(matching.biopsies %>% dplyr::filter(n.aneuploid==1), aes(x=aneuploidy, y=dispersal, fill=Pct)) +
     geom_tile() +
-    scale_fill_viridis_c(breaks = seq(0.1, 1.1, 0.2)) +
+    scale_fill_viridis_c(breaks = seq(0.0, 0.06, 0.02)) +
     labs(x = "Aneuploidy", 
          y = "Dispersal",
          fill = "Percentage\nof biopsies") + 
@@ -1207,8 +1302,8 @@ As noted above, we see that the dispersal of cells only becomes relevant at low 
 The examples above have considered an embryo with 100% dispersal equally likely to an embryo with 0% dispersal. This does not make biological sense - dispersal of aneuploid cells can arise from cell migration or from unique mitotic non-disjunction events. However, it is more likely that aneuploid cells will appear clustered. To explore this, we have limited the parameter space to 0-50% dispersal, and repeated the simulation:
 
 ```{r output-constrain-dispersal, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=3, fig.width=4, fig.cap="Number of biopsies across all embryos with aneuploid cells with 0-50% dispersal."}
-combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
-                           dispersals   = seq(0, 0.5, 0.05),
+combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                           dispersals   = seq(0, 0.5, 0.01),
                            seeds   = 1:N.REPLICATES)
 
 
@@ -1275,7 +1370,7 @@ ggplot(constrain.matching.biopsies %>% dplyr::filter(n.aneuploid==1), aes(x=aneu
 
 ```
 
-```{r constrain-combination-all-plot, fig.height=4, fig.width=7, fig.cap="The probability space of 5-cell biopsies for a 200 cell embryo with 0-50% dispersal."}
+```{r constrain-combination-all-plot, echo=F, fig.height=4, fig.width=7, fig.cap="The probability space of 5-cell biopsies for a 200 cell embryo with 0-50% dispersal."}
 constrain.combination.all.plot = read.data("constrain.combination.all.plot", function(){
   
   n.aneuploid.labels = paste(0:5, "aneuploid cells")
@@ -1302,8 +1397,8 @@ From the above, we can now determine the percentage of PGDIS classes that a give
 ```{r pgdis-classifictions, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.cap="Liklihood of each PGDIS class producing a 5-cell biopsy with a single aneuploid cell", fig.height= 3, fig.width=3 }
 
 
-combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
-                           dispersals   = seq(0, 1, 0.05),
+combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                           dispersals   = DISPERSAL.RANGE,
                            seeds        = 1)
 
 # The possible outcomes from all combinations of embryo parameters
@@ -1392,10 +1487,10 @@ We can conclude from this that there are limitations to the usefulness of biopsi
 
 clumpy.embryos.1x5 = read.data("clumpy.embryos.1x5", function(){
   
-  zero.data = expand.grid(aneuploidy = seq(0, 1, 0.05),
+  zero.data = expand.grid(aneuploidy = ANEUPLOIDY.RANGE,
                           PctBiopsyAneuploid  = seq(0, 100, 20),
                           Count = 0,
-                          dispersal = seq(0, 1, 0.05))
+                          dispersal = seq(0, 1, 0.5))
   
   result.1x5 %>% 
     dplyr::group_by(PctBiopsyAneuploid, aneuploidy, dispersal) %>%
@@ -1429,7 +1524,7 @@ heatmap.1x5 = read.data("heatmap.1x5", function(){
               fill=NA, col="white", size=1)+
     geom_rect(xmin=90, xmax=110, ymin=0.825, ymax=1.025, 
               fill=NA, col="white", size=1)+
-    scale_fill_viridis_c(breaks = seq(0, 100, 10), limits = c(0, 60)) +
+    scale_fill_viridis_c(breaks = seq(0, 10, 1), limits = c(0, 7)) +
     labs(x = "Biopsy aneuploidy",
          y = "Embryo aneuploidy",
          fill = "Percentage\nof biopsies") +
@@ -1490,8 +1585,8 @@ We start with an embryo with 20% aneuploidy with no dispersal. The 1x5 biopsy re
 ```{r heatmap-1x10, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height= 3, fig.cap="Biopsy aneuploidy correlation with embryo for 1x10 biopsies" }
 
 result.1x10 = read.data("result.1x10", function(){
-  combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
-                             dispersals   = seq(0, 1, 0.05),
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                             dispersals   = seq(0, 1, 0.5),
                              seeds        = 1:N.REPLICATES)
   
   # The possible outcomes from all combinations of embryo parameters
@@ -1517,8 +1612,8 @@ result.1x10 = read.data("result.1x10", function(){
 
 clumpy.embryos.1x10 = read.data("clumpy.embryos.1x10", function(){
   
-  zero.data = expand.grid(aneuploidy          = seq(0, 1, 0.05),
-                          dispersal           = seq(0, 1, 0.05),
+  zero.data = expand.grid(aneuploidy          = seq(0, 1, 0.01),
+                          dispersal           = seq(0, 1, 0.5),
                           PctBiopsyAneuploid  = seq(0, 100, 10),
                           Count = 0)
   
@@ -1548,7 +1643,7 @@ heatmap.1x10 = read.data("heatmap.1x10", function(){
               fill=NA, col="white", size=1)+
     geom_rect(xmin=85, xmax=105, ymin=0.825, ymax=1.025, 
               fill=NA, col="white", size=1)+
-    scale_fill_viridis_c(breaks = seq(0, 100, 10), limits = c(0, 60)) +
+    scale_fill_viridis_c(breaks = seq(0, 14, 2), limits = c(0, 14)) +
     labs(x = "Biopsy aneuploidy",
          y = "Embryo aneuploidy",
          fill = "Percentage\nof biopsies") +
@@ -1631,8 +1726,8 @@ take.two.biopsies = function(embryo, biopsy.size, chromosome){
 
 save.seed.range = function(start, end, file, n.cells){
   
-  combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
-                             dispersals   = seq(0, 1, 0.05),
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                             dispersals   = seq(0, 1, 0.5), # we only need 3
                              seeds        = start:end)
   
   
@@ -1680,7 +1775,7 @@ for(n.cells in seq(150, 250, 50)){
 
 ```{r heatmap-2x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=9, fig.cap="A) 1x5 B) 1x10 C) 2x5. Taking two 5-cell biopsies does not overcome the issues in interpreting biopsy aneuploidy"}
 
-zero.data = expand.grid(aneuploidy = seq(0, 1, 0.05),
+zero.data = expand.grid(aneuploidy = ANEUPLOIDY.RANGE,
                         dispersal  = seq(0, 1, 0.5),
                         PctBiopsyAneuploid  = seq(0, 100, 10),
                         Count = 0)
@@ -1775,12 +1870,12 @@ There is an improvement versus a 1x5 biopsy, but not clearly greater than that p
 
 calc.multicell.heatmap = function(embryo.size){
   
-  combinations = expand.grid(aneuploidies = seq(0, 1, 0.05),
-                             dispersals   = seq(0, 1, 0.05),
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                             dispersals   = seq(0, 1, 0.5),
                              seeds        = 1:N.REPLICATES)
   
-  zero.data    = expand.grid(aneuploidy = seq(0, 1, 0.05),
-                             dispersal  = seq(0, 1, 0.05),
+  zero.data    = expand.grid(aneuploidy = ANEUPLOIDY.RANGE,
+                             dispersal  = seq(0, 1, 0.5),
                              PctBiopsyAneuploid  = seq(0, 100, 20),
                              Count = 0)
   
@@ -1944,7 +2039,7 @@ calc.multicell.heatmap = function(embryo.size){
     theme_classic() +
     theme(legend.position = "none")
   
-  zero.data = expand.grid(aneuploidy = seq(0, 1, 0.05),
+  zero.data = expand.grid(aneuploidy = ANEUPLOIDY.RANGE,
                           dispersal  = seq(0, 1, 0.5),
                           PctBiopsyAneuploid  = seq(0, 100, 10),
                           Count = 0)
@@ -2018,15 +2113,17 @@ calc.multicell.heatmap = function(embryo.size){
 ```{r heatmap-2x5-150, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=9, fig.width=10, fig.cap="Biopsy heatmap for a 150 cell embryo"}
 multicell.heatmap.150 = read.data("multicell.heatmap.150", function(){
   calc.multicell.heatmap(150)
+  gc()
 }) 
 multicell.heatmap.150
 ```
 
 ```{r heatmap-2x5-250, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=9, fig.width=10, fig.cap="Biopsy heatmap for a 250 cell embryo"}
-multicell.heatmap.250 = read.data("multicell.heatmap.250", function(){
-  calc.multicell.heatmap(250)
-}) 
-multicell.heatmap.250
+# multicell.heatmap.250 = read.data("multicell.heatmap.250", function(){
+#   calc.multicell.heatmap(250)
+#   gc()
+# }) 
+# multicell.heatmap.250
 ```
 
 # Comparison to real embryos
@@ -2035,33 +2132,20 @@ Ren et al (2022) recently performed single cell sequencing of blastocysts, provi
 
 Figure S3 contains information on the mosaicism rate found in TE at various numbers of sequenced cells. Although our biopsy size is 5, there is no clear relationship in the Ren et al data between the number of sequenced cells and the mosaicism rate, so we will use all values as possible mosaicism rates for the embryo.
 
-Digistising the figure yields the following:
-
-```{r, fig.show="hold", fig.width=3}
-ren.te.data = read.csv("data/ren.te.data.csv", header = T) %>%
-  dplyr::mutate(n_cells_sequenced = round(n_cells_sequenced),
-                mosaicism_rate_pct = round(mosaicism_rate_pct))
-
-ggplot(ren.te.data, aes(x = n_cells_sequenced, y = mosaicism_rate_pct))+
-  geom_point()+
-  labs(x = "Number of cells sequenced", y = "Mosaicism rate")+
-  coord_cartesian(xlim=c(0, 15))+
-  theme_classic()
-
-```
-We also know from Ren et al that 66% of the embryos they studied were TE mosaic to some degree.
+Ren et al were looking at mosaicism rather than purely aneuploidy, so we need to adjust the numbers to match what we have been calling mosaic in this model (_i.e._ our mosaic embryos are a mixture of euploid and aneupploid cells, not a mixture of different karyotypes).
 
 We can now create a 'realistic' population of embryos. 34% will be mosaic, with the mosaicism (aneuploidy) rates drawn from the pool of measured values. We do not have dispersal information, so we will generate embryos over a range of possibilities as we have done before.
 
-
 From the Ren data, we calculate the density function of aneuploidy from observed embryos. We can then sample this distribution to generate new embryos.
 
-```{r ren-analysis, fig.show='hold'}
+```{r ren-analysis, fig.show='hold', eval=F}
 
-n.mosaic = length(ren.te.data$mosaicism_rate_pct)
+n.mosaic = 14
 n.euploid = 5
-n.aneuploid = 7
-aneuploid.rates = c(ren.te.data$mosaicism_rate_pct / 100, rep(0, n.euploid), rep(1, n.aneuploid))
+n.aneuploid = 16
+
+aneuploid.rates = read.csv("data/Ren.mosaic.pct.aneuploid.csv", header = T)$PctAenuploid
+aneuploid.rates = c(aneuploid.rates, rep(0, n.euploid), rep(1, n.aneuploid))
 
 # Restrict the PDF to realistic range
 ren.pdf = density(aneuploid.rates, from = 0, to = 1)
@@ -2070,50 +2154,72 @@ hist(aneuploid.rates, xlim=c(0, 1), freq = F, xlab = "Percent aneuploid")
 lines(ren.pdf)
 
 # Sample 10k points from the distribution
-random.points <- approx(
+ren.distribution <- approx(
   cumsum(ren.pdf$y)/sum(ren.pdf$y), ren.pdf$x, runif(10000)
 )$y
 # Some points are NA
-random.points[is.na(random.points)] = 0
+ren.distribution[is.na(ren.distribution)] = 0
 
 
 # Draw the pdf and sampled points
-hist(random.points, 100, freq = F, xlim=c(0, 1), xlab = "Percent aneuploid")
+hist(ren.distribution, 100, freq = F, xlim=c(0, 1), xlab = "Percent aneuploid")
 lines(ren.pdf)
 
-ren.combo.data = read.data("ren.combo.data", function(){
+```
+
+
+# Diangnostic utility across dispersal and aneuploidy conmbinatons
+
+Another approach is to take a single, and ask if it was diagnostically useful. Does it classify the embryo appropriately?
+We consider a biopsy useful if it can lead to a correct decision on implantation. Under the PGDIS classification levels, a euploid biopsy is useful if it came from a euploid embryo, as this indicates implantation should proceed. A low-level biopsy should come from a low- or high-level embryo, as it should indicate mosaicism is present. A high-level biopsy should come from a high-level or aneuploid embryo, as it should inform that implantation is undesirable. An aneuploid biopsy should come from an aneuploid embryo, to avoid implantation of poor-quality embryos. From these definitions, we can give every biopsy from an embryo a 'useful' or 'not useful' label.
+
+The following plot is thus similar to the previous PGDIS accuracy plots, but more forgiving of variance between embryo and biopsy classes. We see that biopsies from euploid and aneuploid embryos are usually useful and not greatly affected by dispersal. However, biopsies from mosaic biopsies are greatly affected by dispersal, and may not be useful. 
+
+This is why we consider mosaic biopsies to be uninformative.
+
+```{r utility-sampling], fig.show='hold'}
+
+utility.sample.data = read.data("utility.sample.data", function(){
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                             dispersals = DISPERSAL.RANGE, 
+                             seeds = 1:N.REPLICATES)
   
-  # Given a dispersal, create and biopsy an embryo from the Ren PDF
-  sample.embryo = function(dispersal){
-    aneuploidy = sample(random.points, 1, replace = T)
-    if(is.na)
+  # Calculate the diagnostic utility of biopsies across all aneuploidy and dispersal combinations
+  percent.useful.all = function(aneuploidy, dispersal, seed){
+    
     e = tessera::Embryo(n.cells = 200,
                         prop.aneuploid = aneuploidy,
                         dispersal = dispersal,
-                        concordance = 1)
-    b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome = 1)
-    acc = calculate.difference(b, 5, aneuploidy*100)
-    cbind(aneuploidy = rep(aneuploidy, length(b)),
-          dispersal  = rep(dispersal, length(b)),
-          n.aneuploid = b,
-          accuracy    = acc[["values"]]) %>% as.data.frame
+                        concordance = 1,
+                        rng.seed = seed)
+    
+    b = tessera::takeAllBiopsies(e, biopsy.size = 5, chromosome=1)
+    
+    cbind(pct.useful = sum(was.useful.biopsy(aneuploidy*100, b/5*100))/200*100,
+          aneuploidy = aneuploidy,
+          dispersal = dispersal,
+          seed = seed)
   }
   
-  combinations = expand.grid(i=1:100, d=seq(0.0, 1.0, 0.1))
-  value.medians = do.call(rbind, mapply(function(i, d){ cbind(sample.embryo(d), cell=i)},
-                                 combinations$i, 
-                                 combinations$d , 
-                                 SIMPLIFY = F )) %>% 
-    dplyr::group_by(cell, dispersal) %>%
-    dplyr::summarise(median.value = median(accuracy))
-
-  ggplot(value.medians, aes(x=as.factor(dispersal), y=median.value) )+
-    geom_violin()+
-    geom_boxplot(width=0.1)+
-    labs(y = "Median difference between biopsy and embryo")
+  result = as.data.frame(do.call(rbind, mcmapply(percent.useful.all, 
+                                                 aneuploidy = combinations$aneuploidies,
+                                                 dispersal = combinations$dispersals,
+                                                 seed = combinations$seeds,
+                                                 SIMPLIFY = F,
+                                                 mc.cores = N.CORES)))
+  
+  combined.result = result %>% group_by(aneuploidy, dispersal) %>%
+    dplyr::summarise(MedianPctUseful = median(pct.useful))
 })
 
-
+ggplot(utility.sample.data, aes(x = aneuploidy, y = dispersal, fill = MedianPctUseful))+
+  geom_tile()+
+  geom_vline(xintercept = 0.195, col="white")+
+  geom_vline(xintercept = 0.395, col="white")+
+  geom_vline(xintercept = 0.805, col="white")+
+  coord_cartesian(ylim=c(0, 1))+
+  scale_fill_viridis_c()+
+  theme_classic()
 
 ```
 

@@ -1,5 +1,7 @@
 # Check the values from Ren et al
 library(tidyverse)
+
+# These data are Supplementary tables on karyotypes 2-?5 merged and in tidy format
 ren.data = read.csv("Ren/Supp_tables_merged.csv", header = T)
 
 ren.data$isEuploid = ren.data$Karyotype=="46,XY" | ren.data$Karyotype=="46,XX"
@@ -49,7 +51,6 @@ ggplot(ren.wide, aes(x = n.cells, y=MosaicismRate))+
   scale_y_continuous(breaks = seq(0, 1, 0.1))
 # Should have a good overlap at this point
                      
-
 # Note that this is measuring the level of mosaicism relative to the primary karyotype, not to euploidy.
 # We need to recode these for our own analysis.
 
@@ -67,3 +68,5 @@ our.aneuploid = ren.filt %>%
 
 cat("Total embryos    :", n.total, "\nMosaic embryos   :", nrow(our.mosaic), "\nEuploid embryos  :", nrow(our.euploid),"\nAneuploid embryos:", nrow(our.aneuploid), "\n")
 # We can now use the PctAneuploid values from the mosaic embryos in our models
+
+write.csv(our.mosaic, file="data/Ren.mosaic.pct.aneuploid.csv", col.names = T, row.names = F)
