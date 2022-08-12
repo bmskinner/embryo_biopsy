@@ -371,7 +371,7 @@ high.dispersal.result = read.data("high.dispersal.result", function(){
 })
 
 aneuploidy.step.plot = read.data("aneuploidy.step.plot", function(){
-  plot.step(high.dispersal.result, "Aneuploidy", seq(0, 0.5, 0.1))
+  plot.step(high.dispersal.result, "Aneuploidy", seq(0, 0.5, 0.01))
 })
 
 aneuploidy.step.plot
@@ -462,6 +462,7 @@ pgdis.accuracy.by.aneuploidy.plot = read.data("pgdis.accuracy.by.aneuploidy.plot
 })
 
 pgdis.accuracy.by.aneuploidy.plot
+gc()
 
 ```
 
@@ -528,7 +529,7 @@ dispersal.step.data = read.data("dispersal.step.data", function(){
 })
 
 dispersal.step.plot = read.data("dispersal.step.plot", function(){
-  plot.step(dispersal.step.data, "Dispersal", seq(0, 1, 0.05))
+  plot.step(dispersal.step.data, "Dispersal", DISPERSAL.RANGE)
 })
 
 dispersal.step.plot
@@ -646,6 +647,7 @@ dispersal.pgdis.plot = read.data("dispersal.pgdis.plot", function(){
     coord_cartesian(ylim = c(0, 100)) +
     theme_classic()
 })
+gc()
 dispersal.pgdis.plot
 ```
 
@@ -702,6 +704,7 @@ dispersal.aneuploidy.pgdis.plot = read.data("dispersal.aneuploidy.pgdis.plot", f
     theme_classic()
 })
 dispersal.aneuploidy.pgdis.plot
+gc()
 ```
 
 # Changing the biopsy parameters
@@ -946,6 +949,7 @@ biopsy.size.aneuploidy.combination.no.sd.plot = read.data("biopsy.size.aneuploid
     theme_classic()
 })
 
+gc()
 biopsy.size.aneuploidy.combination.no.sd.plot
 
 ```
@@ -1018,7 +1022,7 @@ biopsy.sd.result.plot = read.data("biopsy.sd.result.plot", function(){
          col = "Biopsy SD") + 
     theme_classic()
 })
-
+gc()
 biopsy.sd.plot + biopsy.sd.result.plot + plot_annotation(tag_levels = c("A"))
 
 ```
@@ -1104,7 +1108,7 @@ biopsy.size.combination.plot = read.data("biopsy.size.combination.plot", functio
     coord_cartesian(ylim = c(0, 100)) +
     theme_classic()
 })
-
+gc()
 biopsy.size.combination.plot
 
 ```
@@ -1302,12 +1306,14 @@ As noted above, we see that the dispersal of cells only becomes relevant at low 
 The examples above have considered an embryo with 100% dispersal equally likely to an embryo with 0% dispersal. This does not make biological sense - dispersal of aneuploid cells can arise from cell migration or from unique mitotic non-disjunction events. However, it is more likely that aneuploid cells will appear clustered. To explore this, we have limited the parameter space to 0-50% dispersal, and repeated the simulation:
 
 ```{r output-constrain-dispersal, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=3, fig.width=4, fig.cap="Number of biopsies across all embryos with aneuploid cells with 0-50% dispersal."}
-combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
-                           dispersals   = seq(0, 0.5, 0.01),
-                           seeds   = 1:N.REPLICATES)
+
 
 
 constrain.aneuploidy = read.data("constrain.aneuploidy", function(){
+  
+  combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                           dispersals   = seq(0, 0.5, 0.01),
+                           seeds   = 1:N.REPLICATES)
   # The possible outcomes from all combinations of embryo parameters
   result = do.call(rbind, mcmapply(function(aneuploidy, dispersal, seed){
     
@@ -1340,33 +1346,38 @@ ggplot(as.data.frame(constrain.aneuploidy), aes(x = n.aneuploid, fill = n.aneupl
   scale_fill_manual(values = c("grey", "dark green")) + 
   theme_classic() + 
   theme(legend.position = "none")
-
+gc()
 ```
 
 ```{r constrain-embryo-combination-plot, echo=FALSE, message=F, fig.cap="The probability space of a 1-aneuploid-cell biopsy for a 200 cell embryo with 0-50% dispersal."}
 
-zero.data = expand.grid(aneuploidy = unique(combinations$aneuploidies),
-                        dispersal  = unique(combinations$dispersals),
-                        n.aneuploid = 0:5,
-                        Count = 0)
+constrain.combination.single.plot = read.data("constrain.combination.single.plot", function(){
+  zero.data = expand.grid(aneuploidy = ANEUPLOIDY.RANGE,
+                          dispersal  = seq(0, 0.5, 0.01),
+                          n.aneuploid = 0:5,
+                          Count = 0)
+  
+  constrain.matching.biopsies = suppressMessages(constrain.aneuploidy %>%
+                                                   dplyr::bind_rows(., zero.data) %>%
+                                                   dplyr::group_by(aneuploidy, dispersal, n.aneuploid) %>%
+                                                   dplyr::summarise(Count = sum(Count)) %>%
+                                                   dplyr::ungroup() %>%
+                                                   dplyr::group_by(n.aneuploid) %>%
+                                                   dplyr::mutate(Total = sum(Count)) %>%
+                                                   dplyr::mutate(Pct = Count / Total * 100))
+  
+  ggplot(constrain.matching.biopsies %>% dplyr::filter(n.aneuploid==1), aes(x=aneuploidy, y=dispersal, fill=Pct)) +
+    geom_tile() +
+    scale_fill_viridis_c(breaks = seq(0.1, 1.5, 0.2)) +
+    scale_y_continuous(breaks = seq(0, 0.5, 0.1))+
+    labs(x = "Aneuploidy", 
+         y = "Dispersal",
+         fill = "Percentage\nof biopsies") + 
+    theme_classic()
+})
 
-constrain.matching.biopsies = suppressMessages(constrain.aneuploidy %>%
-                                       dplyr::bind_rows(., zero.data) %>%
-                                       dplyr::group_by(aneuploidy, dispersal, n.aneuploid) %>%
-                                       dplyr::summarise(Count = sum(Count)) %>%
-                                       dplyr::ungroup() %>%
-                                       dplyr::group_by(n.aneuploid) %>%
-                                       dplyr::mutate(Total = sum(Count)) %>%
-                                       dplyr::mutate(Pct = Count / Total * 100))
-
-ggplot(constrain.matching.biopsies %>% dplyr::filter(n.aneuploid==1), aes(x=aneuploidy, y=dispersal, fill=Pct)) +
-  geom_tile() +
-  scale_fill_viridis_c(breaks = seq(0.1, 1.5, 0.2)) +
-  scale_y_continuous(breaks = seq(0, 0.5, 0.1))+
-  labs(x = "Aneuploidy", 
-       y = "Dispersal",
-       fill = "Percentage\nof biopsies") + 
-  theme_classic()
+gc()
+constrain.combination.single.plot
 
 ```
 
@@ -1386,7 +1397,7 @@ constrain.combination.all.plot = read.data("constrain.combination.all.plot", fun
     theme_classic() +
     facet_wrap(~n.aneuploid, ncol = 3, labeller = labeller(n.aneuploid = n.aneuploid.labels))
 })
-
+gc()
 constrain.combination.all.plot
 ```
 
@@ -1533,7 +1544,7 @@ heatmap.1x5 = read.data("heatmap.1x5", function(){
     theme_classic() + 
     facet_wrap(~dispersal, ncol = 3, labeller = labeller(dispersal = disp.labels))
 })
-
+gc()
 heatmap.1x5
 
 ```
