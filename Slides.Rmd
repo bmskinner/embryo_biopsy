@@ -1,26 +1,11 @@
 ---
 title: "Impacts of embryo mosaicism on PGT-A biopsy results"
-author: "Ben Skinner - School of Life Sciences, University of Essex"
+author: Dr Ben Skinner   |   School of Life Sciences, University of Essex   |  b.skinner@essex.ac.uk
 output:
-  # : default
   ioslides_presentation:
     widescreen: yes
     transition: faster
 ---
-
-```{css, echo=FALSE}
-.answer_input {
-  background-color: lightgrey;
-  border: 1px solid green;
-  font-weight: normal;
-}
-
-.answer_output {
-  background-color: lightgreen;
-  border: 2px solid green;
-  font-weight: bold;
-}
-```
 
 ```{r setup, include=FALSE, warning=FALSE, echo=F, message=F}
 suppressMessages(library(tessera))
@@ -65,45 +50,35 @@ read.rds.data = function(name){
 
 - Detect genetic disease in embryos e.g. cystic fibrosis ΔF508
 
-<div class="centered">
-```{r, out.width="50%", out.height="50%", echo=F}
+```{r, out.width="50%", out.height="50%", echo=F, fig.align='center'}
 knitr::include_graphics("Slide_figures/handyside.png")
 ```
 
-```{r, out.width="50%", out.height="50%", echo=F}
+```{r, out.width="50%", out.height="50%", echo=F, fig.align='center'}
 knitr::include_graphics("Slide_figures/cf_diagnosis.png")
 ```
-</div>
 
 ## 1990s: Pre-implantation genetic diagnosis (PGD)
 
-<div class="centered">
-```{r, out.width="50%", out.height="50%", echo=F}
+```{r, out.width="50%", out.height="50%", echo=F, fig.align='center'}
 knitr::include_graphics("Slide_figures/8_cell_embryo.jpg")
 ```
-</div>
 
 - biopsy single cell, PCR for allele of interest
 
 ## 1990s: FISH for specific chromosome
 
-e.g. X-linked recessive disorder
+_e.g._ X-linked recessive disorder
 
-<div class="centered">
-```{r, out.width="40%", out.height="40%", echo=F}
+```{r, out.width="40%", out.height="40%", echo=F, fig.align='center'}
 knitr::include_graphics("Slide_figures/X_PGD.jpg")
 ```
-</div>
-
-
 
 ## 2000s: Assay aneuploidy - e.g. multicolour FISH
 
-<div class="centered">
-```{r, out.width="50%", out.height="50%", echo=F}
+```{r, out.width="50%", out.height="50%", echo=F, fig.align='center'}
 knitr::include_graphics("Slide_figures/Multi-colour_PGS.PNG")
 ```
-</div>
 
 ## 2000s: Measure all the things
 
@@ -123,11 +98,9 @@ Two routes taken:
 
 ## ... wait for blastocyst stage - 150-200 cells
 
-<div class="centered">
-```{r, out.width="50%", out.height="50%", echo=F}
+```{r, out.width="50%", out.height="50%", echo=F, fig.align='center'}
 knitr::include_graphics("Slide_figures/Blastocyst.jpg")
 ```
-</div>
 
 - Inner cell mass separated from trophectoderm
 - Biopsy ~5 cells from trophectoderm
@@ -136,14 +109,12 @@ knitr::include_graphics("Slide_figures/Blastocyst.jpg")
 
 ## ... wait for blastocyst stage - 150-200 cells
 
-<div class="centered">
-```{r, out.width="50%", out.height="50%", echo=F}
+```{r, out.width="50%", out.height="50%", echo=F, fig.align='center'}
 knitr::include_graphics("Slide_figures/Blastocyst.jpg")
 ```
-</div>
 
 - Inner cell mass separated from trophectoderm
-- Biopsy 5 cells from trophectoderm
+- Biopsy ~5 cells from trophectoderm
 
 BUT
 
@@ -230,7 +201,7 @@ cat('<iframe src="./Slide_figures/e3.html" style="position:absolute;width:70%;he
 
 ```
 
-## A toy embryo - 20% aneuploidy
+## A toy embryo - 20% aneuploidy, 5-cell biopsies
 
 ```{r, echo=F, fig.align='center', out.width="90%"}
 b = tessera::takeAllBiopsies(tessera::Embryo(n.cells = 200, prop.aneuploid = 0.2, 
