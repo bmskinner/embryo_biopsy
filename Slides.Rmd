@@ -221,7 +221,7 @@ cat('<iframe src="./Slide_figures/e2.html" style="position:absolute;width:70%;he
 ## A toy embryo with 20% aneuploidy, clustered
 
 
-```{r, echo=FALSE, warning=FALSE, cache=FALSE, results='asis', message=F }
+```{r, echo=FALSE, warning=FALSE, cache=FALSE, results='asis', message=F}
 
 e3 = plot(tessera::Embryo(n.cells = 200, prop.aneuploid = 0.2, 
                           dispersal = 0, rng.seed = 1))
@@ -233,27 +233,15 @@ cat('<iframe src="./Slide_figures/e3.html" style="position:absolute;width:70%;he
 
 ## A toy embryo with 20% aneuploidy
 
-<div class="centered">
-```{r, echo=F }
-
+```{r, echo=F, fig.align='center', out.width="90%"}
 b = tessera::takeAllBiopsies(tessera::Embryo(n.cells = 200, prop.aneuploid = 0.2, 
                           dispersal = 1, rng.seed = 1), biopsy.size = 5, chromosome = 1)
 
-plot.biopsy.aneuploidy(b, 5, 0.2)
-```
-</div>
-
-## A toy embryo with 20% aneuploidy, clustered
-
-<div class="centered">
-```{r, echo=F}
-
-b = tessera::takeAllBiopsies(tessera::Embryo(n.cells = 200, prop.aneuploid = 0.2, 
+b2 = tessera::takeAllBiopsies(tessera::Embryo(n.cells = 200, prop.aneuploid = 0.2, 
                           dispersal = 0, rng.seed = 1), biopsy.size = 5, chromosome = 1)
 
-plot.biopsy.aneuploidy(b, 5, 0.2)
+plot.biopsy.aneuploidy(b, 5, 0.2)+labs(title="Dispersed") + plot.biopsy.aneuploidy(b2, 5, 0.2)+labs(title="Clustered")
 ```
-</div>
 
 ## Things to measure
 
@@ -278,7 +266,7 @@ knitr::include_graphics("Aneuploidy.gif")
 
 <div class="centered">
 ```{r, out.width="70%", out.height="70%", echo=F}
-aneuploidy.step.plot = read.rds.data("aneuploidy.step.plot")
+aneuploidy.step.plot = read.rds.data("Old/aneuploidy.step.plot")
 aneuploidy.step.plot
 ```
 </div>
@@ -287,30 +275,44 @@ aneuploidy.step.plot
 
 <div class="centered">
 ```{r, echo=FALSE, cache=F, fig.show='hold'}
-dispersal.step.plot = read.rds.data("dispersal.step.plot")
+dispersal.step.plot = read.rds.data("Old/dispersal.step.plot")
 dispersal.step.plot
 ```
 </div>
 
 ## Effect on PGDIS classifications
 
-- <20% aneuploid cells: euploid; 20%-40%: low level mosaic; 40%-80%: high level mosaic; >80%: aneuploid
+Preimplantation Genetic Diagnosis International Society
 
-<div class="centered">
-```{r, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold' }
+- <20% aneuploid cells: euploid
+- 20% - <40%: low level mosaic
+- 40% - 80%: high level mosaic
+- >80%: aneuploid
+
+Does the biopsy class match the embryo class?
+
+## Effect on PGDIS classifications
+
+```{r, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.align='center', out.width="90%" }
 dispersal.aneuploidy.heatmap = read.rds.data("dispersal.aneuploidy.heatmap")
 dispersal.aneuploidy.heatmap
 ```
-</div>
 
 ## Effect of changing biopsy size (dispersed, 20% aneuploidy)
 
-<div class="centered">
-```{r, eval=T, echo=FALSE, cache=F, fig.show='hold'}
-biopsy.size.step.plot = read.rds.data("biopsy.size.step.plot")
+```{r, eval=T, echo=FALSE, cache=F, fig.show='hold', fig.align='center'}
+biopsy.size.step.plot = read.rds.data("Old/biopsy.size.step.plot")
 biopsy.size.step.plot
 ```
-</div>
+
+
+## Effect of changing biopsy size - all combinations
+
+```{r, eval=T, echo=FALSE, cache=F, fig.show='hold', fig.align='center', out.height="120%"}
+dispersal.aneuploidy.biopsy.heatmap = read.rds.data("dispersal.aneuploidy.biopsy.heatmap")
+dispersal.aneuploidy.biopsy.heatmap
+```
+
 
 ## What can we learn about an embryo from a biopsy?
 
@@ -322,8 +324,8 @@ biopsy.size.step.plot
 - generate all biopsies from the aneuploidy and dispersal parameter space
 
 <div class="centered">
-```{r, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=4}
-embryo.combination.plot = read.rds.data("embryo.combination.plot")
+```{r, eval=F, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.height=4}
+embryo.combination.plot = read.rds.data("Old/embryo.combination.plot")
 embryo.combination.plot
 ```
 </div>
@@ -334,7 +336,7 @@ embryo.combination.plot
 
 <div class="centered">
 ```{r, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold'}
-embryo.combination.source.plot = read.rds.data("embryo.combination.source.plot")
+embryo.combination.source.plot = read.rds.data("Old/embryo.combination.source.plot")
 embryo.combination.source.plot
 ```
 </div>
@@ -343,7 +345,7 @@ embryo.combination.source.plot
 
 <div class="centered">
 ```{r, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold'}
-embryo.combination.all.plot = read.rds.data("embryo.combination.all.plot")
+embryo.combination.all.plot = read.rds.data("Old/embryo.combination.all.plot")
 embryo.combination.all.plot
 ```
 </div>
@@ -352,7 +354,7 @@ embryo.combination.all.plot
 
 <div class="centered">
 ```{r, echo=F, message=F, warning=F}
-single.biopsy.pgdis.plot = read.rds.data("single.biopsy.pgdis.plot")
+single.biopsy.pgdis.plot = read.rds.data("Old/single.biopsy.pgdis.plot")
 single.biopsy.pgdis.plot
 ```
 </div>
@@ -363,7 +365,7 @@ single.biopsy.pgdis.plot
 
 <div class="centered">
 ```{r heatmap-1x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.height= 4, fig.width=10}
-heatmap.1x5 = read.rds.data("heatmap.1x5")
+heatmap.1x5 = read.rds.data("Old/heatmap.1x5")
 heatmap.1x5
 ```
 </div>
@@ -375,7 +377,7 @@ heatmap.1x5
 
 <div class="centered">
 ```{r heatmap-1x10, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.height= 4, fig.width=10 }
-heatmap.1x10 = read.rds.data("heatmap.1x10")
+heatmap.1x10 = read.rds.data("Old/heatmap.1x10")
 heatmap.1x10
 ```
 </div>
@@ -387,7 +389,7 @@ heatmap.1x10
 <div class="centered">
 ```{r heatmap-2x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.height=4, fig.width=10 }
 
-heatmap.2x5 = read.rds.data("heatmap.2x5")
+heatmap.2x5 = read.rds.data("Old/heatmap.2x5")
 heatmap.2x5
 ```
 </div>
@@ -398,9 +400,9 @@ heatmap.2x5
 
 <div class="centered">
 ```{r pgdis-2x5, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.height=5 }
-pgdis.plot.1x5 = read.rds.data("pgdis.plot.1x5")
-pgdis.plot.1x10 = read.rds.data("pgdis.plot.1x10")
-pgdis.plot.2x5 = read.rds.data("pgdis.plot.2x5")
+pgdis.plot.1x5 = read.rds.data("Old/pgdis.plot.1x5")
+pgdis.plot.1x10 = read.rds.data("Old/pgdis.plot.1x10")
+pgdis.plot.2x5 = read.rds.data("Old/pgdis.plot.2x5")
 pgdis.plot.1x5
 ```
 </div>
