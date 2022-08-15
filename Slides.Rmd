@@ -192,8 +192,7 @@ knitr::include_graphics("Slide_figures/fibonacci-spirals-in-nature.jpg")
 
 - Project a Fibonacci spiral into spherical coordinates
 
-## A toy embryo
-
+## A toy embryo - TE only, 200 cells
 
 ```{r, echo=FALSE, warning=FALSE, cache=FALSE, results='asis', message=F }
 e = plot(tessera::Embryo(n.cells = 200, prop.aneuploid = 0))
@@ -203,9 +202,9 @@ cat('<iframe src="./Slide_figures/e.html" style="position:absolute;width:70%;hei
 
 ```
 
-## A toy embryo with 20% aneuploidy
+## A toy embryo - 20% aneuploidy, dispersed
 
-```{r, echo=FALSE, warning=FALSE, cache=FALSE, results='asis', message=F, fig.width=70, fig.height=70 }
+```{r, echo=FALSE, warning=FALSE, cache=FALSE, results='asis', message=F, fig.width=70, fig.height=70, fig.align='center' }
 
 
 e2 = plot(tessera::Embryo(n.cells = 200, prop.aneuploid = 0.2, 
@@ -218,10 +217,10 @@ cat('<iframe src="./Slide_figures/e2.html" style="position:absolute;width:70%;he
 ```
 
 
-## A toy embryo with 20% aneuploidy, clustered
+## A toy embryo - 20% aneuploidy, clustered
 
 
-```{r, echo=FALSE, warning=FALSE, cache=FALSE, results='asis', message=F}
+```{r, echo=FALSE, warning=FALSE, cache=FALSE, results='asis', message=F, fig.align='center'}
 
 e3 = plot(tessera::Embryo(n.cells = 200, prop.aneuploid = 0.2, 
                           dispersal = 0, rng.seed = 1))
@@ -231,7 +230,7 @@ cat('<iframe src="./Slide_figures/e3.html" style="position:absolute;width:70%;he
 
 ```
 
-## A toy embryo with 20% aneuploidy
+## A toy embryo - 20% aneuploidy
 
 ```{r, echo=F, fig.align='center', out.width="90%"}
 b = tessera::takeAllBiopsies(tessera::Embryo(n.cells = 200, prop.aneuploid = 0.2, 
@@ -294,8 +293,8 @@ Does the biopsy class match the embryo class?
 ## Effect on PGDIS classifications
 
 ```{r, eval=T, echo=FALSE, warning=F, message=F, cache=F, fig.show='hold', fig.align='center', out.width="90%" }
-dispersal.aneuploidy.heatmap = read.rds.data("dispersal.aneuploidy.heatmap")
-dispersal.aneuploidy.heatmap
+aneuploidy.dispersal.heatmap = read.rds.data("aneuploidy.dispersal.heatmap")
+aneuploidy.dispersal.heatmap
 ```
 
 ## Effect of changing biopsy size (dispersed, 20% aneuploidy)
@@ -306,21 +305,23 @@ biopsy.size.step.plot
 ```
 
 
-## Effect of changing biopsy size - all combinations
+## Effect of changing biopsy size on PGDIS accuracy
 
-```{r, eval=T, echo=FALSE, cache=F, fig.show='hold', fig.align='center', out.height="120%"}
-dispersal.aneuploidy.biopsy.heatmap = read.rds.data("dispersal.aneuploidy.biopsy.heatmap")
-dispersal.aneuploidy.biopsy.heatmap
+```{r, eval=T, echo=FALSE, cache=F, fig.show='hold', fig.align='center', fig.width=10, fig.height=5.5}
+aneuploidy.dispersal.biopsy.heatmap = read.rds.data("aneuploidy.dispersal.biopsy.heatmap")
+aneuploidy.dispersal.biopsy.heatmap
 ```
 
 
 ## What can we learn about an embryo from a biopsy?
 
 - suppose we have a 5-cell biopsy with 1 aneuploid cell
+- what embryos could have generated this biopsy?
 
 ## What can we learn about an embryo from a biopsy?
 
 - suppose we have a 5-cell biopsy with 1 aneuploid cell
+- what embryos could have generated this biopsy?
 - generate all biopsies from the aneuploidy and dispersal parameter space
 
 <div class="centered">
@@ -411,12 +412,13 @@ pgdis.plot.1x5
 ## Summary
 
 - models can help us visualise possibilities
+- interpretation of a mosaic biopsy is difficult
 - suggest results outside 0% or 100% aneuploid biopsies should be considered 'non-informative'
 
 BUT
 
-- models are not perfect - what are the biological constraints on these parameters?
-
+- what are the biological constraints on these parameters?
+- when are the aneuploidies arising?
 
 ## Acknowledgements
 
