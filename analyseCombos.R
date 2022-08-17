@@ -1,11 +1,13 @@
 # Test analysing pre-computed values
 library(data.table)
 library(tidyverse)
+library(parallel)
 
 ANEUPLOIDY.RANGE = seq(0, 1, 0.01)
 DISPERSAL.RANGE = seq(0, 1, 0.01)
 N.REPLICATES = 100 
 BIOPSY.SIZES = c(3:10, 15, 20, 25, 30)
+N.CORES = ifelse(Sys.info()["sysname"]=="Windows", 1, 20) 
 
 data.file = "data/all.combos.csv"
 
@@ -35,40 +37,71 @@ calc.pgdis.accuracy = function(data){
               f.aneuploidy <= 1 ~ "Aneuploid")
   }
   
+  to.merged.class = function(f.aneuploidy){
+    case_when(f.aneuploidy < 0.20 ~ "Euploid",
+              f.aneuploidy <= 0.80 ~ "Mosaic",
+              f.aneuploidy <= 1 ~ "Aneuploid")
+  }
+  
   data %>%
     rowwise %>%
     mutate(n_aneuploid = list(c_across(starts_with("V"))),
            f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size))) %>%
     select(-starts_with("V")) %>%
     mutate(pgdis_class = list(to.pgdis.class(f_aneuploid)),
-           actual_class = to.pgdis.class(Aneuploidy),
-           n_pgdis_match = sum(pgdis_class == actual_class),
-           f_pgdis_match = n_pgdis_match / 200) %>%
-    select(-n_aneuploid, -f_aneuploid, -pgdis_class) %>%
+           merge_class = list(to.merged.class(f_aneuploid)),
+           actual_pgdis_class = to.pgdis.class(Aneuploidy),
+           actual_merge_class = to.merged.class(Aneuploidy),
+           n_pgdis_match = sum(pgdis_class == actual_pgdis_class),
+           f_pgdis_match = n_pgdis_match / 200,
+           n_merge_match = sum(merge_class==actual_merge_class),
+           f_merge_match = n_pgdis_match / 200) %>%
+    select(-n_aneuploid, -f_aneuploid, -pgdis_class, -merge_class) %>%
     ungroup
 }
 
+# Read the saved raw values
 values = data.table::fread(data.file, header = T)
 
-# Summarising is memory intensive, chunk and save
-for(b in BIOPSY.SIZES){
-  
-  for(a in seq(0, 1, 0.25)){
-    e = a+0.25
-    a = ifelse(a==0, -0.1, a) # ensure zero included
-    cat("Summarising ", a, "-", e, "\n")
-    
-    aneu.part.file = paste0("data/aggregates/part_b",b,"_a", a,"-",e,".csv")
-    if(!file.exists(aneu.part.file)){
-      filt = values[values$Aneuploidy > a & values$Aneuploidy <= e & values$Biopsy_size==b,]
-      values.tf = calc.pgdis.accuracy(filt)
-      write.csv(values.tf, file = aneu.part.file, quote = F, row.names = F)
-      rm(values_tf)
-      rm(filt)
-      gc()
-    }
+
+aggregate.values = function(b, a, d){
+  aneu.part.file = paste0("data/aggregates/merged_b",b,"_a", a,"_d",d,".csv")
+  if(!file.exists(aneu.part.file)){
+    cat("Summarising a:", a, "\td: ", d, "\tb:",b,  "\n")
+    filt = values[values$Aneuploidy == a & values$Dispersal == d & values$Biopsy_size==b,]
+    filt.tf = calc.pgdis.accuracy(filt)
+    write.csv(filt.tf, file = aneu.part.file, quote = F, row.names = F)
+    rm(values_tf)
+    rm(filt)
+    gc()
   }
 }
+
+combinations = expand.grid(a = ANEUPLOIDY.RANGE, d = DISPERSAL.RANGE, b = BIOPSY.SIZES)
+
+# Function writes output files, no need to store in object
+mcmapply(aggregate.values, a=combinations$a, d = combinations$d, b = combinations$b, mc.cores=N.CORES)
+
+
+# # Summarising is memory intensive, chunk and save
+# for(b in BIOPSY.SIZES){
+#   
+#   for(a in seq(0, 1, 0.25)){
+#     e = a+0.25
+#     a = ifelse(a==0, -0.1, a) # ensure zero included
+#     cat("Summarising ", a, "-", e, "\n")
+#     
+#     aneu.part.file = paste0("data/aggregates/part_b",b,"_a", a,"-",e,".csv")
+#     if(!file.exists(aneu.part.file)){
+#       filt = values[values$Aneuploidy > a & values$Aneuploidy <= e & values$Biopsy_size==b,]
+#       values.tf = calc.pgdis.accuracy(filt)
+#       write.csv(values.tf, file = aneu.part.file, quote = F, row.names = F)
+#       rm(values_tf)
+#       rm(filt)
+#       gc()
+#     }
+#   }
+# }
 
 # Now we can generate the summary figures
 
