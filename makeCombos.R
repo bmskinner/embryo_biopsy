@@ -2,7 +2,6 @@
 
 library(tessera)
 library(parallel)
-library(data.table)
 
 # Global variables
 ANEUPLOIDY.RANGE = seq(0, 1, 0.01)
@@ -19,9 +18,9 @@ for(a in ANEUPLOIDY.RANGE){
   for(d in DISPERSAL.RANGE){
     
     raw.part.file = paste0("data/raw/raw_values_a", a, "_d", d, ".csv")
-    cat("Aneuploidy:", a, "\tDispersal:", d, "\n")
+
     if(!file.exists(raw.part.file)){
-      
+      cat("Aneuploidy:", a, "\tDispersal:", d, "\n")
       get.biopsies = function(b, s){
         e = tessera::Embryo(n.cells = 200,
                             prop.aneuploid = a,
@@ -32,16 +31,10 @@ for(a in ANEUPLOIDY.RANGE){
         c(a, d, b, s, o)
       }
       
-      # Write the column header
-      cat("Aneuploidy\tDispersal\tBiopsy_size\tSeed\t", paste0("V", 1:200, collapse = "\t"), "\n", 
-          file = raw.part.file, append = F)
+      r = do.call(rbind, mcmapply(get.biopsies, b = combs$b, s = combs$s, SIMPLIFY = F, mc.cores = 22))
+      colnames(r) <- c("Aneuploidy", "Dispersal", "Biopsy_size", "Seed", paste0("V", 1:200))
       
-      r = do.call(rbind, mcmapply(get.biopsies, b = combs$b, s = combs$s, SIMPLIFY = F, mc.cores = 20))
-      write.table(r, raw.part.file, append = T, col.names = F, row.names = F, sep = "\t")
+      write.table(r, raw.part.file, append = F, col.names = T, row.names = F, sep = "\t", quote = F)
     }
   }
 }
-
-
-
-
