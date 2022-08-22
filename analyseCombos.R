@@ -2,6 +2,8 @@
 library(data.table)
 library(tidyverse)
 library(parallel)
+library(svglite)
+library(patchwork)
 
 ANEUPLOIDY.RANGE = seq(0, 1, 0.01)
 DISPERSAL.RANGE = seq(0, 1, 0.01)
@@ -32,17 +34,25 @@ to.merged.class.2 = function(f.aneuploidy){
 
 # Given raw input data, calculate the difference between the biopsy and 
 # embryo aneuploidies and summarise into counts
-calc.step.accuracy = function(data, var.name){
+calc.step.accuracy = function(data){
+
   data %>%
     rowwise %>%
-    mutate(n_aneuploid = list(c_across(starts_with("V"))),
-           f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size)),
-           diff_embryo = list(abs(f_aneuploid-Aneuploidy))) %>%
-    select(-starts_with("V"), -n_aneuploid, -f_aneuploid) %>%
+    mutate(f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size))) %>%
+    select(-starts_with("V")) %>%
     ungroup %>%
-    unnest(diff_embryo) %>%
-    dplyr::group_by(Aneuploidy, Dispersal, Biopsy_size, diff_embryo) %>%
-    dplyr::summarise(Count = dplyr::n())
+    unnest(f_aneuploid) %>%
+    dplyr::mutate(diff_to_embryo = round(abs(f_aneuploid-Aneuploidy), digits=2)) %>%
+    dplyr::group_by(Aneuploidy, Dispersal, Biopsy_size, diff_to_embryo) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    dplyr::group_by(Aneuploidy, Dispersal, Biopsy_size) %>%
+    dplyr::mutate(TotalBiopsies = sum(Count),
+                  PctBiopsies   = Count/TotalBiopsies*100) %>%
+    dplyr::distinct() %>%
+    dplyr::arrange(Dispersal, Biopsy_size, Aneuploidy, diff_to_embryo) %>%
+    dplyr::select(-TotalBiopsies, -Count) %>%
+    dplyr::distinct()
+  
 }
 
 # Given raw input data, calculate the accuracy of the biopsies
@@ -125,18 +135,80 @@ make.biopsy.values = function(a){
   }
 }
 
+# Make a basic heatmap with no rectangle annotations
+plot.heatmap = function(data, zero.data){
+  ggplot(data, aes(x = f_aneuploid, y = Aneuploidy, fill=PctTotal))+
+    geom_raster(data = zero.data)+
+    geom_raster() +
+    scale_fill_viridis_c() +
+    labs(x = "Biopsy aneuploidy",
+         y = "Embryo aneuploidy",
+         fill = "Percentage\nof biopsies") +
+    scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+    scale_x_continuous(breaks = seq(0, 100, 20)) +
+    theme_classic() + 
+    facet_wrap(~Dispersal, ncol = 3)+
+    theme(legend.position = "top",
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+
+# Make a heatmap with PGDIS class annotations
+plot.pgdis.heatmap = function(data, zero.data){
+  plot.heatmap(data, zero.data)+
+    geom_rect(xmin=-10, xmax=10, ymin=-0.025, ymax=0.195, 
+              fill=NA, col="white", size=1)+
+    geom_rect(xmin=10, xmax=30, ymin=0.195, ymax=0.395, 
+              fill=NA, col="white", size=1)+
+    geom_rect(xmin=30, xmax=90, ymin=0.395, ymax=0.805, 
+              fill=NA, col="white", size=1)+
+    geom_rect(xmin=90, xmax=110, ymin=0.805, ymax=1.025, 
+              fill=NA, col="white", size=1)
+}
+
+# Make a heatmap with merged class annotations 20% and 80%
+plot.merge.heatmap = function(data, zero.data){
+  plot.heatmap(data, zero.data)+
+      geom_rect(xmin=-10, xmax=10, ymin=-0.025, ymax=0.195,
+                fill=NA, col="white", size=1)+
+      geom_rect(xmin=10, xmax=90, ymin=0.195, ymax=0.825,
+                fill=NA, col="white", size=1)+
+      geom_rect(xmin=90, xmax=110, ymin=0.825, ymax=1.025,
+                fill=NA, col="white", size=1)
+}
+
+# Make a heatmap with merged class annotations 10% and 90%
+plot.merge2.heatmap = function(data, zero.data){
+  plot.heatmap(data, zero.data)+
+    geom_rect(xmin=-10, xmax=10, ymin=-0.025, ymax=0.095,
+              fill=NA, col="white", size=1)+
+    geom_rect(xmin=10, xmax=90, ymin=0.095, ymax=0.905,
+              fill=NA, col="white", size=1)+
+    geom_rect(xmin=90, xmax=110, ymin=0.905, ymax=1.025,
+              fill=NA, col="white", size=1)
+}
+
+
+plot.columns = function(data){
+  ggplot(data, aes(x = n_aneuploid/b*100, y= PctTotal,  fill=IsCorrect))+
+    geom_hline(yintercept = 50) +
+    geom_col(position="stack") +
+    scale_fill_manual(values = c("dark green")) +
+    scale_x_continuous(breaks = seq(0, 100, 20)) +
+    scale_y_continuous(breaks = seq(0, 100, 20)) +
+    coord_cartesian(ylim = c(0, 100)) + 
+    labs(y = "Percentage of embryos\nmatching biopsy class",
+         x = "Biopsy aneuploidy") +
+    facet_wrap(~Dispersal, ncol = 3) +
+    theme_classic() +
+    theme(legend.position = "none",
+          axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+}
+
 combinations = expand.grid(a = ANEUPLOIDY.RANGE, d = DISPERSAL.RANGE)
 
 # Functions write output files, no need to store in object
 mcmapply(make.aggregate.values, a = combinations$a, d = combinations$d, mc.cores = N.CORES)
 mcmapply(make.biopsy.values, a = ANEUPLOIDY.RANGE, mc.cores = 3)
-
-# # Read the saved raw values
-# raw.values = do.call(rbind, mclapply(list.files(path = "data/raw",
-#                                               pattern = "raw", full.names = T),
-#                                    fread,
-#                                    header = T,
-#                                  mc.cores = 5))
 
 # Now read in the aggregate values to generate the summary figures
 agg.values = do.call(rbind, mclapply(list.files(path = "data/aggregates", 
@@ -183,7 +255,7 @@ raw.values = do.call(rbind, mclapply(list.files(path = "data/raw",
                                      header = T,
                                      mc.cores = 5))
 
-
+# Create predictive heatmaps and column charts for PGDIS and merged classes
 for(b in BIOPSY.SIZES){
   # Calculate the proportion of embryos matching each biopsy
   agg.values.heatmap.data = raw.values %>% 
@@ -208,66 +280,19 @@ for(b in BIOPSY.SIZES){
                           PctTotal = 0)
   
   # Plot with PGDIS classes
-  ggplot(agg.values.heatmap.data, aes(x = f_aneuploid, y = Aneuploidy, fill=PctTotal))+
-    geom_raster(data = zero.data)+
-    geom_raster() +
-    geom_rect(xmin=-10, xmax=10, ymin=-0.025, ymax=0.175, 
-              fill=NA, col="white", size=1)+
-    geom_rect(xmin=10, xmax=30, ymin=0.175, ymax=0.375, 
-              fill=NA, col="white", size=1)+
-    geom_rect(xmin=30, xmax=90, ymin=0.375, ymax=0.825, 
-              fill=NA, col="white", size=1)+
-    geom_rect(xmin=90, xmax=110, ymin=0.825, ymax=1.025, 
-              fill=NA, col="white", size=1)+
-    scale_fill_viridis_c() +
-    labs(x = "Biopsy aneuploidy",
-         y = "Embryo aneuploidy",
-         fill = "Percentage\nof biopsies") +
-    scale_y_continuous(breaks = seq(0, 1, 0.1)) +
-    scale_x_continuous(breaks = seq(0, 100, 20)) +
-    theme_classic() + 
-    facet_wrap(~Dispersal, ncol = 3)
-  ggsave(filename = paste0("figure/predictive_heatmap_",b,".png"), dpi=300, units = "mm", width = 170, height = 120)
-}  
-
-for(b in BIOPSY.SIZES){
-  # Calculate the proportion of embryos matching biopsy class
-  agg.values.col.data = raw.values %>% 
-    dplyr::filter(Biopsy_size == b) %>%
-    rowwise %>%
-    mutate(n_aneuploid = list(as.double(c_across(starts_with("V"))))) %>%
-    select(-starts_with("V")) %>%
-    tidyr::unnest(n_aneuploid) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(EmbryoPGDISClass = to.pgdis.class(Aneuploidy),
-                  BiopsyPGDISClass = to.pgdis.class(n_aneuploid/Biopsy_size),
-                  EmbryoMergeClass = to.merged.class(Aneuploidy),
-                  BiopsyPMergeClass = to.merged.class(n_aneuploid/Biopsy_size)) %>%
-    dplyr::group_by(Dispersal, n_aneuploid, EmbryoPGDISClass, BiopsyPGDISClass) %>%
-    dplyr::summarise(Count = dplyr::n()) %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(n_aneuploid, Dispersal) %>%
-    dplyr::mutate(Total = sum(Count),
-                  PctTotal = Count / Total * 100,
-                  IsPGDISCorrect = EmbryoPGDISClass == BiopsyPGDISClass) %>%
-    dplyr::filter(IsPGDISCorrect)
+  hmap.pgdis.plot  = plot.pgdis.heatmap(agg.values.heatmap.data, zero.data)
+  hmap.merge.plot  = plot.merge.heatmap(agg.values.heatmap.data, zero.data)
+  hmap.merge2.plot = plot.merge2.heatmap(agg.values.heatmap.data, zero.data)
   
-  ggplot(agg.values.col.data, aes(x = n_aneuploid/b*100, y= PctTotal,  fill=IsPGDISCorrect))+
-    geom_hline(yintercept = 50) +
-    geom_col(position="stack") +
-    scale_fill_manual(values = c("dark green")) +
-    scale_x_continuous(breaks = seq(0, 100, 20)) +
-    scale_y_continuous(breaks = seq(0, 100, 20)) +
-    coord_cartesian(ylim = c(0, 100)) + 
-    labs(y = "Percentage of embryos\nmatching biopsy class",
-         x = "Biopsy aneuploidy") +
-    facet_wrap(~Dispersal, ncol = 3) +
-    theme_classic() +
-    theme(legend.position = "none")
-  ggsave(filename = paste0("figure/predictive_columns_pgdis_",b,".png"), dpi=300, units = "mm", width = 170, height = 120)
-}
-
-for(b in BIOPSY.SIZES){
+  ggsave(hmap.pgdis.plot, filename = paste0("figure/predictive_heatmap_pgdis_",b,".svg"), dpi=300, units = "mm", width = 85, height = 85)
+  ggsave(hmap.pgdis.plot, filename = paste0("figure/predictive_heatmap_pgdis_",b,".png"), dpi=300, units = "mm", width = 85, height = 85)
+  
+  ggsave(hmap.merge.plot, filename = paste0("figure/predictive_heatmap_merge_",b,".svg"), dpi=300, units = "mm", width = 85, height = 85)
+  ggsave(hmap.merge.plot, filename = paste0("figure/predictive_heatmap_merge_",b,".png"), dpi=300, units = "mm", width = 85, height = 85)
+  
+  ggsave(hmap.merge2.plot, filename = paste0("figure/predictive_heatmap_merge2_",b,".svg"), dpi=300, units = "mm", width = 85, height = 85)
+  ggsave(hmap.merge2.plot, filename = paste0("figure/predictive_heatmap_merge2_",b,".png"), dpi=300, units = "mm", width = 85, height = 85)
+  
   # Calculate the proportion of embryos matching biopsy class
   agg.values.col.data = raw.values %>% 
     dplyr::filter(Biopsy_size == b) %>%
@@ -276,51 +301,127 @@ for(b in BIOPSY.SIZES){
     select(-starts_with("V")) %>%
     tidyr::unnest(n_aneuploid) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(EmbryoMergeClass = to.merged.class.2(Aneuploidy),
-                  BiopsyMergeClass = to.merged.class.2(n_aneuploid/Biopsy_size)) %>%
-    dplyr::group_by(Dispersal, n_aneuploid, EmbryoMergeClass, BiopsyMergeClass) %>%
+    dplyr::mutate(EmbryoClass = to.pgdis.class(Aneuploidy),
+                  BiopsyClass = to.pgdis.class(n_aneuploid/Biopsy_size)) %>%
+    dplyr::group_by(Dispersal, n_aneuploid, EmbryoClass, BiopsyClass) %>%
     dplyr::summarise(Count = dplyr::n()) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(n_aneuploid, Dispersal) %>%
     dplyr::mutate(Total = sum(Count),
                   PctTotal = Count / Total * 100,
-                  IsCorrect = EmbryoMergeClass == BiopsyMergeClass) %>%
+                  IsCorrect = EmbryoClass == BiopsyClass) %>%
     dplyr::filter(IsCorrect)
   
-  ggplot(agg.values.col.data, aes(x = n_aneuploid/b*100, y= PctTotal,  fill=IsCorrect))+
-    geom_hline(yintercept = 50) +
-    geom_col(position="stack") +
-    scale_fill_manual(values = c("dark green")) +
-    scale_x_continuous(breaks = seq(0, 100, 20)) +
-    scale_y_continuous(breaks = seq(0, 100, 20)) +
-    coord_cartesian(ylim = c(0, 100)) + 
-    labs(y = "Percentage of embryos\nmatching biopsy class",
-         x = "Biopsy aneuploidy") +
-    facet_wrap(~Dispersal, ncol = 3) +
-    theme_classic() +
-    theme(legend.position = "none")
-  ggsave(filename = paste0("figure/predictive_columns_merge2_",b,".png"), dpi=300, units = "mm", width = 170, height = 120)
+  col.pgdis.plot = plot.columns(agg.values.col.data)
+  ggsave(col.pgdis.plot, filename = paste0("figure/predictive_columns_pgdis_",b,".svg"), dpi=300, units = "mm", width = 85, height = 85)
+  ggsave(col.pgdis.plot, filename = paste0("figure/predictive_columns_pgdis_",b,".png"), dpi=300, units = "mm", width = 85, height = 85)
+  
+  agg.values.merge.data = raw.values %>% 
+    dplyr::filter(Biopsy_size == b) %>%
+    rowwise %>%
+    mutate(n_aneuploid = list(as.double(c_across(starts_with("V"))))) %>%
+    select(-starts_with("V")) %>%
+    tidyr::unnest(n_aneuploid) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(EmbryoClass = to.merged.class(Aneuploidy),
+                  BiopsyClass = to.merged.class(n_aneuploid/Biopsy_size)) %>%
+    dplyr::group_by(Dispersal, n_aneuploid, EmbryoClass, BiopsyClass) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(n_aneuploid, Dispersal) %>%
+    dplyr::mutate(Total = sum(Count),
+                  PctTotal = Count / Total * 100,
+                  IsCorrect = EmbryoClass == BiopsyClass) %>%
+    dplyr::filter(IsCorrect)
+  
+  col.merge.plot = plot.columns(agg.values.merge.data)
+  ggsave(col.pgdis.plot, filename = paste0("figure/predictive_columns_merge_",b,".svg"), dpi=300, units = "mm", width = 85, height = 85)
+  ggsave(col.pgdis.plot, filename = paste0("figure/predictive_columns_merge_",b,".png"), dpi=300, units = "mm", width = 85, height = 85)
+  
+  agg.values.merge2.data = raw.values %>% 
+    dplyr::filter(Biopsy_size == b) %>%
+    rowwise %>%
+    mutate(n_aneuploid = list(as.double(c_across(starts_with("V"))))) %>%
+    select(-starts_with("V")) %>%
+    tidyr::unnest(n_aneuploid) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(EmbryoClass = to.merged.class.2(Aneuploidy),
+                  BiopsyClass = to.merged.class.2(n_aneuploid/Biopsy_size)) %>%
+    dplyr::group_by(Dispersal, n_aneuploid, EmbryoClass, BiopsyClass) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    dplyr::ungroup() %>%
+    dplyr::group_by(n_aneuploid, Dispersal) %>%
+    dplyr::mutate(Total = sum(Count),
+                  PctTotal = Count / Total * 100,
+                  IsCorrect = EmbryoClass == BiopsyClass) %>%
+    dplyr::filter(IsCorrect)
+  
+  col.merge2.plot = plot.columns(agg.values.merge2.data)
+  ggsave(col.pgdis.plot, filename = paste0("figure/predictive_columns_merge2_",b,".svg"), dpi=300, units = "mm", width = 85, height = 85)
+  ggsave(col.pgdis.plot, filename = paste0("figure/predictive_columns_merge2_",b,".png"), dpi=300, units = "mm", width = 85, height = 85)
+  
+  combo.pgdis.plot = hmap.pgdis.plot + col.pgdis.plot + plot_annotation(tag_levels = c("A"))
+  ggsave(combo.pgdis.plot, filename = paste0("figure/predictive_heatmap_pgdis_combined_",b,".svg"), dpi=300, units = "mm", 
+         width = 170, height = 85)
+  ggsave(combo.pgdis.plot, filename = paste0("figure/predictive_heatmap_pgdis_combined_",b,".png"), dpi=300, units = "mm", 
+         width = 170, height = 85)
+  
+  combo.merge.plot = hmap.merge.plot + col.merge.plot + plot_annotation(tag_levels = c("A"))
+  ggsave(combo.merge.plot, filename = paste0("figure/predictive_heatmap_merge_combined_",b,".svg"), dpi=300, units = "mm", 
+         width = 170, height = 85)
+  ggsave(combo.merge.plot, filename = paste0("figure/predictive_heatmap_merge_combined_",b,".png"), dpi=300, units = "mm", 
+         width = 170, height = 85)
+  
+  combo.merge2.plot = hmap.merge2.plot + col.merge2.plot + plot_annotation(tag_levels = c("A"))
+  ggsave(combo.merge2.plot, filename = paste0("figure/predictive_heatmap_merge2_combined_",b,".svg"), dpi=300, units = "mm", 
+         width = 170, height = 85)
+  ggsave(combo.merge2.plot, filename = paste0("figure/predictive_heatmap_merge2_combined_",b,".png"), dpi=300, units = "mm", 
+         width = 170, height = 85)
+  
 }
 
+# Calculate step values for aneuploidy
+# These plots are hard to interpret - keep for supplement
+step.aneuploidy = calc.step.accuracy(raw.values[raw.values$Dispersal==1 & Biopsy_size == 5,])
 
-# aneuploidy.values = agg_values %>% 
-#   filter(Dispersal %in% c(0, 0.25, 0.5, 0.75, 1),
+step.aneuploidy = step.aneuploidy %>% mutate(Bin = cut(diff_to_embryo, breaks=seq(-.01, 1.01, 0.1)))
+
+# Make a table of all possible values for cumulative summing
+# all.vals = expand.grid("Aneuploidy" = ANEUPLOIDY.RANGE,
+#                        "Dispersal" = unique(grouped_data$Dispersal),
+#                        "Biopsy_size" = unique(grouped_data$Biopsy_size),
+#                        "diff_to_embryo" = round(seq(0, 1, 0.01), digits = 2),
+#                        "PctBiopsies" = 0)
+
+ggplot(step.aneuploidy, aes(x = Aneuploidy, y = PctBiopsies, fill = Bin)) +
+  geom_col(position = "stack", width=0.01)+
+  labs(y = "Percent of biopsies" ,
+       x = "Aneuploidy of embryo",
+       fill = "Percent difference\nbetween biopsy\nand embryo") +
+  scale_fill_viridis_d(direction = -1) +
+  # coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
+  # scale_x_continuous(breaks = seq(0, 100, 10)) +
+  # scale_y_continuous(breaks = seq(0, 100, 5)) +
+  theme_classic()
+
+# aneuploidy.values = agg.values %>%
+#   filter(Dispersal %in% c(1),
 #          Biopsy_size==5) %>%
 #   group_by(Aneuploidy, Dispersal) %>%
 #   summarise(pct_pgdis_match = mean(f_pgdis_match)*100,
 #             sd_pgdis_match = sd(f_pgdis_match)*100)
-# 
-# 
+# # 
+# # 
 # ggplot(aneuploidy.values, aes(x = Aneuploidy*100, y = pct_pgdis_match)) +
-#   geom_col() + 
-#   geom_errorbar(ymin = aneuploidy.values$pct_pgdis_match - aneuploidy.values$sd_pgdis_match, 
+#   geom_col() +
+#   geom_errorbar(ymin = aneuploidy.values$pct_pgdis_match - aneuploidy.values$sd_pgdis_match,
 #                 ymax = aneuploidy.values$pct_pgdis_match + aneuploidy.values$sd_pgdis_match,
 #                 width = 0.6) +
 #   geom_vline(xintercept = 19.5, col="black")+
 #   geom_vline(xintercept = 39.5, col="black")+
 #   geom_vline(xintercept = 80.5, col="black")+
 #   labs(x = "Aneuploidy",
-#        y = "Percent of biopsies in correct\nPGDIS class") + 
+#        y = "Percent of biopsies in correct\nPGDIS class") +
 #   coord_cartesian(ylim = c(0, 100))+
 #   scale_x_continuous(breaks = seq(0, 100, 10)) +
 #   facet_wrap(~Dispersal)+
@@ -398,7 +499,7 @@ ggplot(aneuploidy.dispersal.biopsy.values[aneuploidy.dispersal.biopsy.values$Bio
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   scale_fill_viridis_c()+
   theme_classic()
-ggsave(filename = "figure/heatmap_pgdis_match_5.png", dpi=300, units = "mm", width = 170, height = 120)
+ggsave(filename = "figure/heatmap_pgdis_match_5.png", dpi=300, units = "mm", width = 85, height = 60)
 
 ggplot(aneuploidy.dispersal.biopsy.values[aneuploidy.dispersal.biopsy.values$Biopsy_size==5,], 
        aes(x = Aneuploidy*100, y = Dispersal, fill=pct_merge_match)) +
