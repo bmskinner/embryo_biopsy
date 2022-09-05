@@ -1,4 +1,4 @@
-# Test analysing pre-computed values
+# Analyse pre-computed raw biopsy data to create aggregate values for charting
 library(data.table)
 library(tidyverse)
 library(parallel)
