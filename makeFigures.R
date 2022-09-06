@@ -6,7 +6,7 @@ library(svglite)
 library(data.table)
 library(parallel)
 
-# source("analyseCombos.R")
+source("parameters.R")
 
 save.single.width = function(plot, filename, height){
   ggsave(plot, filename=paste0(filename, ".png"), dpi=300, units = "mm", width = 85, height = height)
@@ -146,10 +146,10 @@ for(b in BIOPSY.SIZES){
 # Make the predictive heatmaps
 # # Read the saved raw values for selected dispersals
 raw.values = do.call(rbind, mclapply(list.files(path = "data/raw",
-                                                pattern = "raw_values_a.*_d(0|0.5|1).csv", full.names = T),
+                                                pattern = "raw_values_e200_a.*_d(0|0.5|1).csv", full.names = T),
                                      fread,
                                      header = T,
-                                     mc.cores = 5))
+                                     mc.cores = N.CORES))
 
 # Create predictive heatmaps and column charts for PGDIS and merged classes
 for(b in BIOPSY.SIZES){
