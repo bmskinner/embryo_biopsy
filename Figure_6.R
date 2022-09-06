@@ -5,7 +5,7 @@ source("functions.R")
 
 # # Read the saved raw values for selected dispersals at 200 cell embryo
 raw.values = do.call(rbind, mclapply(list.files(path = RAW.DATA.PATH,
-                                                pattern = "raw_values_a.*_d(0|0.5|1).csv", full.names = T),
+                                                pattern = "raw_values_e200_a.*_d(0|0.5|1).csv", full.names = T),
                                      fread,
                                      header = T,
                                      mc.cores = N.CORES)) %>%
