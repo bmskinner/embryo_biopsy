@@ -5,16 +5,19 @@ source("functions.R")
 # # Read the saved raw values for selected dispersals
 raw.values = do.call(rbind, mclapply(list.files(path = RAW.DATA.PATH,
                                                 pattern = "raw_values_e.*_a.*_d(0|0.5|1).csv", full.names = T),
-                                     fread,
+                                     function(x){fread(x) %>% rowwise %>%
+                                         mutate(f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size *100))) %>%
+                                         select(-starts_with("V")) %>%
+                                         tidyr::unnest(f_aneuploid) },
                                      header = T,
                                      mc.cores = N.CORES)) %>%
   dplyr::filter(Biopsy_size == 5)
 
 heatmap.data = raw.values %>% 
-  rowwise %>%
-  mutate(f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size *100))) %>%
-  select(-starts_with("V")) %>%
-  tidyr::unnest(f_aneuploid) %>%
+  # rowwise %>%
+  # mutate(f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size *100))) %>%
+  # select(-starts_with("V")) %>%
+  # tidyr::unnest(f_aneuploid) %>%
   dplyr::ungroup() %>%
   dplyr::group_by(f_aneuploid, Aneuploidy, Dispersal, Embryo_size) %>%
   dplyr::summarise(Count = dplyr::n()) %>%
