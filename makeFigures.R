@@ -8,10 +8,13 @@ library(parallel)
 
 source("parameters.R")
 
+# Save a plot as single column width (85mm)
 save.single.width = function(plot, filename, height){
   ggsave(plot, filename=paste0(filename, ".png"), dpi=300, units = "mm", width = 85, height = height)
   ggsave(plot, filename=paste0(filename, ".svg"), dpi=300, units = "mm", width = 85, height = height)
 }
+
+# Save a plot as double column width (170mm)
 save.double.width = function(plot, filename, height){
   ggsave(plot, filename=paste0(filename, ".png"), dpi=300, units = "mm", width = 170, height = height)
   ggsave(plot, filename=paste0(filename, ".svg"), dpi=300, units = "mm", width = 170, height = height)
@@ -74,7 +77,7 @@ plot.merge2.heatmap = function(data, zero.data){
               fill=NA, col="white", size=1)
 }
 
-
+# Plot PGDIS/merged classification accuracy column charts
 plot.columns = function(data){
   ggplot(data, aes(x = n_aneuploid/b*100, y= PctTotal,  fill=IsCorrect))+
     geom_hline(yintercept = 50) +
@@ -92,7 +95,7 @@ plot.columns = function(data){
 }
 
 
-
+# Plot the percentage of cells in a biopsy versus the percentage of total biopsies
 plot.biopsy.aneuploidy = function(n.biopsy.aneuploid, biopsy.size, pct.embryo.aneuploid){
   pct.biopsy.aneuploid = n.biopsy.aneuploid / biopsy.size * 100
   biopsy.data = as.data.frame(pct.biopsy.aneuploid) %>%
@@ -144,7 +147,7 @@ for(b in BIOPSY.SIZES){
 }
 
 # Make the predictive heatmaps
-# # Read the saved raw values for selected dispersals
+# # Read the saved raw values for selected dispersals at 200 cell embryo
 raw.values = do.call(rbind, mclapply(list.files(path = "data/raw",
                                                 pattern = "raw_values_e200_a.*_d(0|0.5|1).csv", full.names = T),
                                      fread,

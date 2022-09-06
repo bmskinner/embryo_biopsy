@@ -115,7 +115,6 @@ make.aggregate.values = function(e, a, d){
 
 # Make output files aggregating data for biopsy accuracy calculations
 make.biopsy.values = function(e, a){
-  # out.file = paste0("data/aggregates/biopsy_a", a, "_d", d, ".csv")
   out.file = paste0("data/aggregates/biopsy_e", e, "_a", a, ".csv")
   if(!file.exists(out.file)){
     in.files = list.files(path = "data/raw",
