@@ -2,22 +2,22 @@
 source("parameters.R")
 source("functions.R")
 
+read.data = function(x){
+  fread(x, header=T) %>% 
+    dplyr::filter(Biopsy_size == 5) %>%
+    rowwise %>%
+    mutate(f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size *100))) %>%
+    select(-starts_with("V")) %>%
+    tidyr::unnest(f_aneuploid) 
+}
+
 # # Read the saved raw values for selected dispersals
 raw.values = do.call(rbind, mclapply(list.files(path = RAW.DATA.PATH,
                                                 pattern = "raw_values_e.*_a.*_d(0|0.5|1).csv", full.names = T),
-                                     function(x){fread(x) %>% rowwise %>%
-                                         mutate(f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size *100))) %>%
-                                         select(-starts_with("V")) %>%
-                                         tidyr::unnest(f_aneuploid) },
-                                     header = T,
-                                     mc.cores = N.CORES)) %>%
-  dplyr::filter(Biopsy_size == 5)
+                                     read.data,
+                                     mc.cores = N.CORES))
 
 heatmap.data = raw.values %>% 
-  # rowwise %>%
-  # mutate(f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size *100))) %>%
-  # select(-starts_with("V")) %>%
-  # tidyr::unnest(f_aneuploid) %>%
   dplyr::ungroup() %>%
   dplyr::group_by(f_aneuploid, Aneuploidy, Dispersal, Embryo_size) %>%
   dplyr::summarise(Count = dplyr::n()) %>%
@@ -51,10 +51,11 @@ hmap.plot  = ggplot(heatmap.data, aes(x = f_aneuploid, y = Aneuploidy, fill=PctT
   labs(x = "Biopsy aneuploidy",
        y = "Embryo aneuploidy",
        fill = "Percentage\nof biopsies") +
-  scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   theme_classic() + 
-  facet_wrap(Embryo_size~Dispersal, ncol = 3)+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5))
+  facet_grid(Embryo_size~Dispersal)+
+  scale_y_continuous(sec.axis = sec_axis(~ . , name = "Embryo size", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Dispersal of aneuploid cells", breaks = NULL, labels = NULL))
 
-save.double.width(hmap.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_Sxxxx_predictive"), height = 120)
+save.double.width(hmap.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_Sxxxx_predictive"), height = 170)
