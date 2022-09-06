@@ -2,8 +2,7 @@
 library(data.table)
 library(tidyverse)
 library(parallel)
-library(svglite)
-library(patchwork)
+library(fs)
 
 source("parameters.R")
 
@@ -129,6 +128,15 @@ make.biopsy.values = function(e, a){
     rm(filt.tf)
     invisible(gc(verbose = F))
   }
+}
+
+
+# Make output directories
+if(!fs::dir_exists("data/aggregate")){
+  fs::dir_create("data/aggregate", recursive = T)
+}
+if(!fs::dir_exists("data/raw")){
+  fs::dir_create("data/raw", recursive = T)
 }
 
 # Create the aggregate files
