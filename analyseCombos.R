@@ -119,17 +119,17 @@ make.aggregate.values = function(e, a, d){
 }
 
 # Make output files aggregating data for biopsy accuracy calculations
-make.biopsy.values = function(a){
+make.biopsy.values = function(e, a){
   # out.file = paste0("data/aggregates/biopsy_a", a, "_d", d, ".csv")
-  out.file = paste0("data/aggregates/biopsy_a", a, ".csv")
+  out.file = paste0("data/aggregates/biopsy_e", e, "_a", a, ".csv")
   if(!file.exists(out.file)){
     in.files = list.files(path = "data/raw",
-                          pattern = paste0("raw_values_a", a, "_"), full.names = T)
+                          pattern = paste0("raw_values_e", e, "_a", a, "_"), full.names = T)
     
     in.data = do.call(rbind, mclapply(in.files,
                                       fread,
                                       header = T,
-                                      mc.cores = 22))
+                                      mc.cores = N.CORES))
     filt.tf = calc.biopsy.accuracy(in.data)
     write.csv(filt.tf, file = out.file, quote = F, row.names = F)
     rm(filt.tf)
@@ -137,8 +137,9 @@ make.biopsy.values = function(a){
   }
 }
 
+# Create the aggregate files
 combinations = expand.grid(a = ANEUPLOIDY.RANGE, d = DISPERSAL.RANGE, e = EMBRYO.SIZES)
-
-# Functions write output files, no need to store in object
 mcmapply(make.aggregate.values, e = combinations$e, a = combinations$a, d = combinations$d, mc.cores = N.CORES)
-mcmapply(make.biopsy.values, a = ANEUPLOIDY.RANGE, mc.cores = 3)
+
+combinations = expand.grid(a = ANEUPLOIDY.RANGE, e = EMBRYO.SIZES)
+mcmapply(make.biopsy.values, e = combinations$e, a = combinations$a, mc.cores = N.CORES)
