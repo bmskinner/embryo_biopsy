@@ -9,6 +9,7 @@ ANEUPLOIDY.RANGE = seq(0, 1, 0.01)
 DISPERSAL.RANGE = seq(0, 1, 0.01)
 N.REPLICATES = 100 
 BIOPSY.SIZES = c(3:10, 15, 20, 25, 30)
+EMBRYO.SIZES = c(100, 150, 200, 250)
 N.CORES = ifelse(Sys.info()["sysname"]=="Windows", 1, 5) 
 
 to.pgdis.class = function(f.aneuploidy){
@@ -103,10 +104,10 @@ calc.biopsy.accuracy = function(data){
 }
 
 # Calculate aggregate data from raw values for making heatmaps
-make.aggregate.values = function(a, d){
-  aneu.part.file = paste0("data/aggregates/merged_a", a, "_d", d, ".csv")
+make.aggregate.values = function(e, a, d){
+  aneu.part.file = paste0("data/aggregates/merged_e", e, "_a", a, "_d", d, ".csv")
   if(!file.exists(aneu.part.file)){
-    in.file = paste0("data/raw/raw_values_a", a, "_d", d, ".csv")
+    in.file = paste0("data/raw/raw_values_e", e, "_a", a, "_d", d, ".csv")
     if(file.exists(in.file)){
       in.data = fread(file=in.file, header = T)
       filt.tf = calc.pgdis.accuracy(in.data)
@@ -136,8 +137,8 @@ make.biopsy.values = function(a){
   }
 }
 
-combinations = expand.grid(a = ANEUPLOIDY.RANGE, d = DISPERSAL.RANGE)
+combinations = expand.grid(a = ANEUPLOIDY.RANGE, d = DISPERSAL.RANGE, e = EMBRYO.SIZES)
 
 # Functions write output files, no need to store in object
-mcmapply(make.aggregate.values, a = combinations$a, d = combinations$d, mc.cores = N.CORES)
+mcmapply(make.aggregate.values, e = combinations$e, a = combinations$a, d = combinations$d, mc.cores = N.CORES)
 mcmapply(make.biopsy.values, a = ANEUPLOIDY.RANGE, mc.cores = 3)
