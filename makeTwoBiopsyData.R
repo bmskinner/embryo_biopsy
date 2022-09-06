@@ -5,31 +5,8 @@ library(parallel)
 library(tidyverse)
 library(data.table)
 
-ANEUPLOIDY.RANGE = seq(0, 1, 0.01)
-DISPERSAL.RANGE = seq(0, 1, 0.5)
-N.REPLICATES = 100 
-BIOPSY.SIZES = c(3:10, 15, 20, 25, 30)
-EMBRYO.SIZES = seq(100, 250, 50)
-N.CORES = ifelse(Sys.info()["sysname"]=="Windows", 1, 20) 
-
-to.pgdis.class = function(f.aneuploidy){
-  case_when(f.aneuploidy < 0.20 ~ "Euploid",
-            f.aneuploidy < 0.40 ~ "Low level",
-            f.aneuploidy <= 0.80 ~ "High level",
-            f.aneuploidy <= 1 ~ "Aneuploid")
-}
-
-to.merged.class = function(f.aneuploidy){
-  case_when(f.aneuploidy < 0.20 ~ "Euploid",
-            f.aneuploidy <= 0.80 ~ "Mosaic",
-            f.aneuploidy <= 1 ~ "Aneuploid")
-}
-
-to.merged.class.2 = function(f.aneuploidy){
-  case_when(f.aneuploidy < 0.10 ~ "Euploid",
-            f.aneuploidy <= 0.90 ~ "Mosaic",
-            f.aneuploidy <= 1 ~ "Aneuploid")
-}
+source("parameters.R")
+source("functions.R")
 
 # For a given embryo, take all possible two biopsies
 take.two.biopsies = function(embryo, biopsy.size, chromosome){

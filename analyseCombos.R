@@ -5,51 +5,7 @@ library(parallel)
 library(fs)
 
 source("parameters.R")
-
-to.pgdis.class = function(f.aneuploidy){
-  case_when(f.aneuploidy < 0.20 ~ "Euploid",
-            f.aneuploidy < 0.40 ~ "Low level",
-            f.aneuploidy <= 0.80 ~ "High level",
-            f.aneuploidy <= 1 ~ "Aneuploid")
-}
-
-to.merged.class = function(f.aneuploidy){
-  case_when(f.aneuploidy < 0.20 ~ "Euploid",
-            f.aneuploidy <= 0.80 ~ "Mosaic",
-            f.aneuploidy <= 1 ~ "Aneuploid")
-}
-
-to.merged.class.2 = function(f.aneuploidy){
-  case_when(f.aneuploidy < 0.10 ~ "Euploid",
-            f.aneuploidy <= 0.90 ~ "Mosaic",
-            f.aneuploidy <= 1 ~ "Aneuploid")
-}
-
-# Given raw input data, calculate the difference between the biopsy and 
-# embryo aneuploidies and summarise into cumulative percentage
-calc.step.accuracy = function(data, all.vals){
-  
-  data %>%
-    rowwise %>%
-    mutate(f_aneuploid = list(as.double(c_across(starts_with("V")) / Biopsy_size))) %>%
-    select(-starts_with("V")) %>%
-    ungroup %>%
-    unnest(f_aneuploid) %>%
-    dplyr::mutate(diff_to_embryo = round(abs(f_aneuploid-Aneuploidy), digits=2)) %>%
-    dplyr::group_by(Aneuploidy, Dispersal, Biopsy_size, diff_to_embryo) %>%
-    dplyr::summarise(Count = dplyr::n()) %>%
-    dplyr::bind_rows(., all.vals) %>% # add in all data
-    dplyr::group_by(Aneuploidy, Dispersal, Biopsy_size, diff_to_embryo) %>%
-    dplyr::summarise(Count = sum(Count)) %>% # recalculate counts
-    dplyr::group_by(Aneuploidy, Dispersal, Biopsy_size) %>%
-    dplyr::mutate(TotalBiopsies = sum(Count),
-                  PctBiopsies   = Count/TotalBiopsies*100) %>%
-    dplyr::distinct() %>%
-    dplyr::arrange(Biopsy_size, Dispersal, Aneuploidy, diff_to_embryo) %>%
-    dplyr::select(-TotalBiopsies, -Count) %>%
-    dplyr::distinct() %>% 
-    dplyr::mutate(CumPct = cumsum(PctBiopsies))
-}
+source("functions.R")
 
 # Given raw input data, calculate the accuracy of the biopsies
 # with respect to PGDIS classification boundaries
@@ -99,9 +55,9 @@ calc.biopsy.accuracy = function(data){
 
 # Calculate aggregate data from raw values for making heatmaps
 make.aggregate.values = function(e, a, d){
-  aneu.part.file = paste0("data/aggregates/merged_e", e, "_a", a, "_d", d, ".csv")
+  aneu.part.file = paste0(AGGREGATE.DATA.PATH, "/merged_e", e, "_a", a, "_d", d, ".csv")
   if(!file.exists(aneu.part.file)){
-    in.file = paste0("data/raw/raw_values_e", e, "_a", a, "_d", d, ".csv")
+    in.file = paste0(RAW.DATA.PATH, "/raw_values_e", e, "_a", a, "_d", d, ".csv")
     if(file.exists(in.file)){
       in.data = fread(file=in.file, header = T)
       filt.tf = calc.pgdis.accuracy(in.data)
@@ -114,9 +70,9 @@ make.aggregate.values = function(e, a, d){
 
 # Make output files aggregating data for biopsy accuracy calculations
 make.biopsy.values = function(e, a){
-  out.file = paste0("data/aggregates/biopsy_e", e, "_a", a, ".csv")
+  out.file = paste0(AGGREGATE.DATA.PATH, "/biopsy_e", e, "_a", a, ".csv")
   if(!file.exists(out.file)){
-    in.files = list.files(path = "data/raw",
+    in.files = list.files(path = RAW.DATA.PATH,
                           pattern = paste0("raw_values_e", e, "_a", a, "_"), full.names = T)
     
     in.data = do.call(rbind, mclapply(in.files,
@@ -132,11 +88,11 @@ make.biopsy.values = function(e, a){
 
 
 # Make output directories
-if(!fs::dir_exists("data/aggregate")){
-  fs::dir_create("data/aggregate", recursive = T)
+if(!fs::dir_exists(AGGREGATE.DATA.PATH)){
+  fs::dir_create(AGGREGATE.DATA.PATH, recursive = T)
 }
-if(!fs::dir_exists("data/raw")){
-  fs::dir_create("data/raw", recursive = T)
+if(!fs::dir_exists(RAW.DATA.PATH)){
+  fs::dir_create(RAW.DATA.PATH, recursive = T)
 }
 
 # Create the aggregate files
