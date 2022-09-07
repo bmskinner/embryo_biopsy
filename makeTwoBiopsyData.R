@@ -105,13 +105,9 @@ combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
                            dispersals   = DISPERSAL.RANGE)
 
 # Generate the data files
-
-runBiopsy = function(){
-  mcmapply(make.two.biopsy.data, 
-       aneuploidy  = combinations$aneuploidies,
-       dispersal   = combinations$dispersals,
-       mc.cores    = N.CORES)
-}
-
+mcmapply(make.two.biopsy.data, 
+         aneuploidy  = combinations$aneuploidies,
+         dispersal   = combinations$dispersals,
+         mc.cores    = N.CORES)
 
 
