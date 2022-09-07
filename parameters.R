@@ -8,6 +8,7 @@ N.CORES = ifelse(Sys.info()["sysname"]=="Windows", 1, 5)
 
 RAW.DATA.PATH = "data/raw"
 AGGREGATE.DATA.PATH = "data/aggregates"
+TWO.BIOPSY.DATA.PATH = "data/two_biopsy"
 
 # Where figures should be saved
 FIGURE.OUTPUT.DIR = "figure"
