@@ -32,7 +32,7 @@ for(b in BIOPSY.SIZES){
                           PctTotal = 0)
   
   # Plot with PGDIS classes
-  ggplot(filt.data, aes(x = f_aneuploid, y = Aneuploidy, fill=PctTotal))+
+  hmap.plot.pgdis = ggplot(filt.data, aes(x = f_aneuploid, y = Aneuploidy, fill=PctTotal))+
     geom_raster(data = zero.data)+
     geom_raster() +
     geom_rect(xmin=-5, xmax=15, ymin=-0.025, ymax=0.175, 
@@ -54,11 +54,12 @@ for(b in BIOPSY.SIZES){
     facet_grid(Embryo_size~Dispersal)+
     theme_classic()
 
-  ggsave(filename = paste0("figure/predictive_heatmap_two_biopsy_pgdis_",b,".png"), 
-         dpi=300, units = "mm", width = 170, height = 150)
+  save.double.width(hmap.plot.pgdis, 
+    filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_heatmap_two_biopsy_pgdis_", b), 
+    height = 150)
   
   # Plot with merge classes
-  ggplot(filt.data, aes(x = f_aneuploid, y = Aneuploidy, fill=PctTotal))+
+  hmap.plot.merge = ggplot(filt.data, aes(x = f_aneuploid, y = Aneuploidy, fill=PctTotal))+
     geom_raster(data = zero.data)+
     geom_raster() +
     geom_rect(xmin=-5, xmax=15, ymin=-0.025, ymax=0.175, 
@@ -77,8 +78,10 @@ for(b in BIOPSY.SIZES){
                        sec.axis = sec_axis(~ . , name = "Dispersal of aneuploid cells",breaks = NULL, labels = NULL)) +
     facet_grid(Embryo_size~Dispersal)+
     theme_classic()
-  ggsave(filename = paste0("figure/predictive_heatmap_two_biopsy_merge_",b,".png"), 
-         dpi=300, units = "mm", width = 170, height = 150)
+
+  save.double.width(hmap.plot.merge, 
+    filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_heatmap_two_biopsy_merge_", b), 
+    height = 150)
 
   col.data.pgdis = in.data %>% 
     dplyr::filter(Biopsy_size == b) %>%
@@ -93,7 +96,7 @@ for(b in BIOPSY.SIZES){
                   IsPGDISCorrect = EmbryoPGDISClass == BiopsyPGDISClass) %>%
     dplyr::filter(IsPGDISCorrect)
   
-  ggplot(col.data.pgdis, aes(x = n_aneuploid/b*100, y= PctTotal,  fill=IsPGDISCorrect))+
+ col.plot.pgdis = ggplot(col.data.pgdis, aes(x = n_aneuploid/b*100, y= PctTotal,  fill=IsPGDISCorrect))+
     geom_hline(yintercept = 50) +
     geom_col(position="stack") +
     scale_fill_manual(values = c("dark green")) +
@@ -107,8 +110,10 @@ for(b in BIOPSY.SIZES){
     facet_grid(Embryo_size~Dispersal) +
     theme_classic() +
     theme(legend.position = "none")
-  ggsave(filename = paste0("figure/predictive_columns_two_biopsy_pgdis_",b,".png"), 
-         dpi=300, units = "mm", width = 170, height = 150)
+
+  save.double.width(col.plot.pgdis, 
+    filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_columns_two_biopsy_pgdis_", b), 
+    height = 150)
   
   col.data.merge = in.data %>% 
     dplyr::filter(Biopsy_size == b) %>%
@@ -123,7 +128,7 @@ for(b in BIOPSY.SIZES){
                   IsPGDISCorrect = EmbryoMergeClass == BiopsyMergeClass) %>%
     dplyr::filter(IsPGDISCorrect)
   
-  ggplot(col.data.merge, aes(x = n_aneuploid/b*100, y= PctTotal,  fill=IsPGDISCorrect))+
+  col.plot.merge = ggplot(col.data.merge, aes(x = n_aneuploid/b*100, y= PctTotal,  fill=IsPGDISCorrect))+
     geom_hline(yintercept = 50) +
     geom_col(position="stack") +
     scale_fill_manual(values = c("dark green")) +
@@ -137,7 +142,9 @@ for(b in BIOPSY.SIZES){
     facet_grid(Embryo_size~Dispersal) +
     theme_classic() +
     theme(legend.position = "none")
-  ggsave(filename = paste0("figure/predictive_columns_two_biopsy_merge_",b,".png"),
-         dpi=300, units = "mm", width = 170, height = 150)
+
+  save.double.width(col.plot.merge, 
+    filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_columns_two_biopsy_merge_", b), 
+    height = 150)
   
 }
