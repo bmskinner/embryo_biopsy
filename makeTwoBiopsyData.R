@@ -51,7 +51,7 @@ make.two.biopsy.data = function(aneuploidy, dispersal){
   part.file = paste0(TWO.BIOPSY.DATA.PATH, "/two_biopsy_values_a", aneuploidy, "_d", dispersal, ".csv")
   
   if(!file.exists(part.file)){
-    cat("Making for aneuploidy dispersal combo\n")
+    # cat("Making for aneuploidy dispersal combo\n")
     # Generate the biopsies from an embryo of the given size
     get.biopsies = function(s, embryo.size, biopsy.size){
       # cat("Getting biopsies\n")
@@ -72,12 +72,12 @@ make.two.biopsy.data = function(aneuploidy, dispersal){
                                 embryo.size = ad.combo$embryo.size,
                                 biopsy.size = ad.combo$biopsy.size,
                                 SIMPLIFY = F))
-    cat("Made aneuploidy dispersal combo\n")
+    # cat("Made aneuploidy dispersal combo\n")
     
     r = r %>% 
       as.data.frame %>%
       tidyr::unnest_longer(., col=n_aneuploid, simplify = T)
-    cat("Unnested\n")
+    # cat("Unnested\n")
       
     r$Aneuploidy  = unlist(r$Aneuploidy, use.names = FALSE)
     r$Dispersal   = unlist(r$Dispersal, use.names = FALSE)
@@ -101,8 +101,8 @@ if(!fs::dir_exists(TWO.BIOPSY.DATA.PATH)){
 }
 
 # Make combinations of parameters to run
-combinations = expand.grid(aneuploidies = c(0, 0.1),
-                           dispersals   = c(0))
+combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
+                           dispersals   = DISPERSAL.RANGE)
 
 # Generate the data files
 
