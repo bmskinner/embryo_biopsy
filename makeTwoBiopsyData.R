@@ -43,10 +43,12 @@ take.two.biopsies = function(embryo, biopsy.size, chromosome){
 # For a combination of aneuploidy and dispersal, calculate all two biopsy values
 make.two.biopsy.data = function(aneuploidy, dispersal){
   
+  # Output for the data
   part.file = paste0(TWO.BIOPSY.DATA.PATH, "/two_biopsy_values_a", aneuploidy, "_d", dispersal, ".csv")
   
   if(!file.exists(part.file)){
     
+    # Generate the biopsies from an embryo of the given size
     get.biopsies = function(s, embryo.size, biopsy.size){
       e = tessera::Embryo(n.cells = embryo.size,
                           prop.aneuploid = aneuploidy,
@@ -58,10 +60,12 @@ make.two.biopsy.data = function(aneuploidy, dispersal){
            Embryo_size = embryo.size, Biopsy_size = biopsy.size, n_aneuploid = b)
     }
     
+    # Create the possible embryo, biopsy and seed sizes
     ad.combo = expand.grid(embryo.size  = EMBRYO.SIZES,
                            biopsy.size  = BIOPSY.SIZES,
                            seed         = 1:N.REPLICATES)
     
+    # Run all combinations and combine data
     r = do.call(rbind, mcmapply(get.biopsies, 
                                 s           = ad.combo$seed, 
                                 embryo.size = ad.combo$embryo.size,
@@ -79,20 +83,23 @@ make.two.biopsy.data = function(aneuploidy, dispersal){
       dplyr::group_by(Aneuploidy, Dispersal, Embryo_size, Biopsy_size, n_aneuploid) %>%
       dplyr::summarise(Total_biopsies = dplyr::n())
     
+    # Export data to file and cleanup
     write.table(r, part.file, append = F, col.names = T, row.names = F, sep = "\t", quote = F)
     rm(r)
     gc()
   }
 }
 
+# Make output folder if needed
 if(!fs::dir_exists(TWO.BIOPSY.DATA.PATH)){
   fs::dir_create(TWO.BIOPSY.DATA.PATH, recursive = T)
 }
 
+# Make combinations of parameters to run
 combinations = expand.grid(aneuploidies = ANEUPLOIDY.RANGE,
                            dispersals   = DISPERSAL.RANGE)
 
-# Make the combinations and generate the data files
+# Generate the data files
 # Note - do not parallel here because each make.two.biopsy.data call invokes
 # mcmapply
 mapply(make.two.biopsy.data, 
