@@ -98,40 +98,47 @@ head(output)
 
 write.csv(output, file = "Rank_results.csv", quote = F, row.names = F, col.names = T)
 
-output = read.csv("Rank_results.csv", header = T)
-output$Aneu.diff = round(output$High.aneu - output$Low.aneu, digits = 3)
+output <- read.csv("Rank_results.csv", header = T)
+output$Aneu.diff <- round(output$High.aneu - output$Low.aneu, digits = 3)
 
-ggplot(output, aes(x = Low.aneu, y = High.aneu, fill = Correct.rank>50)) +
+full.plot = ggplot(output, aes(x = Low.aneu, y = High.aneu, fill = Correct.rank)) +
   geom_tile() +
-  # scale_fill_viridis_c(limits = c(0, 100)) +
-  labs(x = "Embryo one aneuploidy", y = "Embryo two aneuploidy")+
-  facet_grid(Low.disp ~ High.disp)+
+  scale_fill_viridis_c(limits = c(0, 100)) +
+  scale_y_continuous(
+    sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
+  ) +
+  scale_x_continuous(sec.axis = sec_axis(~., name = "Embryo two dispersal", breaks = NULL, labels = NULL)) +
+  labs(x = "Embryo one aneuploidy", y = "Embryo two aneuploidy") +
+  facet_grid(Low.disp ~ High.disp) +
   theme_classic()
-ggsave(filename = "Rank_output.png")
+save.double.width(full.plot, "Figure xxxx - Rank_output", 170)
 
 
-filt = output %>%
+filt <- output %>%
   # dplyr::filter(Low.disp == 0 & High.disp==0) %>%
   dplyr::group_by(Aneu.diff, Low.disp, High.disp) %>%
-  dplyr::summarise(Mean.correct = mean(Correct.rank),
-                SD.correct = sd(Correct.rank))# %>%
-  # dplyr::select(Aneu.diff, Mean.correct, SD.correct) %>%
-  # dplyr::distinct()
+  dplyr::summarise(
+    Mean.correct = mean(Correct.rank),
+    SD.correct = sd(Correct.rank)
+  ) # %>%
+# dplyr::select(Aneu.diff, Mean.correct, SD.correct) %>%
+# dplyr::distinct()
 
-out.plot = ggplot(filt, aes(x = Aneu.diff, y = Mean.correct)) +
-  geom_hline(yintercept = 50, col="grey")+
+out.plot <- ggplot(filt, aes(x = Aneu.diff, y = Mean.correct)) +
+  annotate("rect", xmin = 0, xmax = 0.2, ymin = 0, ymax = Inf, fill = 'lightgray') +
+  geom_hline(yintercept = 50, col = "black") +
   geom_point() +
-  geom_errorbar(aes(ymin=Mean.correct-SD.correct, ymax =Mean.correct+SD.correct ), size=0.5)+
-  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20),
-                     sec.axis = sec_axis(~ . , name = "Embryo one dispersal", breaks = NULL, labels = NULL))+
-  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Embryo two dispersal", breaks = NULL, labels = NULL))+
-  labs(x = "Difference in aneuploidy between embryos", y = "Percent correctly ranked")+
-  facet_grid(Low.disp ~ High.disp)+
-
-
-  
-  theme_classic()+
-  theme(axis.line.y = element_line(),
-        panel.grid.major.y = element_line())
+  geom_errorbar(aes(ymin = Mean.correct - SD.correct, ymax = Mean.correct + SD.correct), size = 0.5) +
+  scale_y_continuous(
+    limits = c(0, 100), breaks = seq(0, 100, 20),
+    sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
+  ) +
+  scale_x_continuous(sec.axis = sec_axis(~., name = "Embryo two dispersal", breaks = NULL, labels = NULL)) +
+  labs(x = "Difference in aneuploidy between embryos", y = "Percent correctly ranked") +
+  facet_grid(Low.disp ~ High.disp) +
+  theme_classic() +
+  theme(
+    axis.line.y = element_line(),
+    panel.grid.major.y = element_line()
+  )
 save.double.width(out.plot, "Figure xxxx - Rank_correct.png", 170)
-
