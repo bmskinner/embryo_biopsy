@@ -101,7 +101,7 @@ write.csv(output, file = "Rank_results.csv", quote = F, row.names = F, col.names
 output <- read.csv("Rank_results.csv", header = T)
 output$Aneu.diff <- round(output$High.aneu - output$Low.aneu, digits = 3)
 
-full.plot = ggplot(output, aes(x = Low.aneu, y = High.aneu, fill = Correct.rank)) +
+full.plot <- ggplot(output, aes(x = Low.aneu, y = High.aneu, fill = Correct.rank)) +
   geom_tile() +
   scale_fill_viridis_c(limits = c(0, 100)) +
   scale_y_continuous(
@@ -125,7 +125,7 @@ filt <- output %>%
 # dplyr::distinct()
 
 out.plot <- ggplot(filt, aes(x = Aneu.diff, y = Mean.correct)) +
-  annotate("rect", xmin = 0, xmax = 0.2, ymin = 0, ymax = Inf, fill = 'lightgray') +
+  annotate("rect", xmin = 0, xmax = 0.2, ymin = 0, ymax = Inf, fill = "lightgray") +
   geom_hline(yintercept = 50, col = "black") +
   geom_point() +
   geom_errorbar(aes(ymin = Mean.correct - SD.correct, ymax = Mean.correct + SD.correct), size = 0.5) +
