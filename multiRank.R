@@ -116,21 +116,21 @@ result2 <- calc.mean.ranks(c(0.2, 0.3, 0.4, 0.7, 0.7, 0.8, 0.8, 0.8, 0.8))
 
 rank.plot.1 <- ggplot(result1, aes(x = rownames(result1), y = mean)) +
   geom_point() +
-  geom_text(aes(label=aneuploidy*100), nudge_y = 2.5)+
+  geom_text(aes(label = aneuploidy * 100), nudge_y = 2.5) +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd)) +
   scale_x_discrete() +
-  scale_y_continuous(breaks = seq(0, nrow(result1), 1))+
+  scale_y_continuous(breaks = seq(0, nrow(result1), 1)) +
   labs(x = "Embryo in pool", y = "Mean rank from biopsies") +
   theme_classic()
 # save.single.width(rank.plot.1, "Figure xxxx - Rank_multi_1", 85)
 
 rank.plot.2 <- ggplot(result2, aes(x = rownames(result2), y = mean)) +
   geom_point() +
-  geom_text(aes(label=aneuploidy*100), nudge_y = 2.5)+
+  geom_text(aes(label = aneuploidy * 100), nudge_y = 2.5) +
   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd)) +
   scale_x_discrete() +
-  scale_y_continuous(breaks = seq(0, nrow(result2), 1))+
+  scale_y_continuous(breaks = seq(0, nrow(result2), 1)) +
   labs(x = "Embryo in pool", y = "Mean rank from biopsies") +
   theme_classic()
 
-save.double.width(rank.plot.1+rank.plot.2+plot_annotation(tag_levels = c("A")), "Figure xxxx - Rank_multi_2", 85)
+save.double.width(rank.plot.1 + rank.plot.2 + plot_annotation(tag_levels = c("A")), "Figure xxxx - Rank_multi_2", 85)
