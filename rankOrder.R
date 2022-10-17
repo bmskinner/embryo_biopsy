@@ -14,6 +14,17 @@ library(data.table)
 source("parameters.R")
 source("functions.R")
 
+#' Calculate the ranks for a given combination of aneuploidy and dispersal
+#'
+#' @param p1 the fractional aneuploidy of embryo 1
+#' @param p2 the fractional aneuploidy of embryo 2
+#' @param d1 the dispersal of embryo 1
+#' @param d2 the dispersal of embryo 2
+#' @param seed1 the RNG seed for embryo 1
+#' @param seed2 the RNG seed for embryo 2
+#'
+#' @return a named vector with the total biopsies in each rank class from all
+#'  pairwise combinations of biopsies from the two embryos
 calculate.ranks <- function(p1, p2, d1, d2, seed1, seed2) {
   low.embryo <- tessera::Embryo(
     n.cells = 200,
@@ -49,32 +60,47 @@ calculate.ranks <- function(p1, p2, d1, d2, seed1, seed2) {
   }
   combs$rank <- sapply(combs$diff, calc.is.correct)
 
+  # Return the total number of instances in each category
   c(
-    "Correct rank" = length(combs$rank[combs$rank == "Correct rank"]) / nrow(combs) * 100,
-    "Incorrect rank" = length(combs$rank[combs$rank == "Incorrect rank"]) / nrow(combs) * 100,
-    "No rank" = length(combs$rank[combs$rank == "No rank"]) / nrow(combs) * 100,
+    "Correct rank" = length(combs$rank[combs$rank == "Correct rank"]),
+    "Incorrect rank" = length(combs$rank[combs$rank == "Incorrect rank"]),
+    "No rank" = length(combs$rank[combs$rank == "No rank"]),
     # Split the ties 50:50 between correct and incorrect
-    "Adj.correct.rank" = (length(combs$rank[combs$rank == "Correct rank"]) + (length(combs$rank[combs$rank == "No rank"]) / 2)) / nrow(combs) * 100,
-    "Adj.incorrect.rank" = (length(combs$rank[combs$rank == "Incorrect rank"]) + (length(combs$rank[combs$rank == "No rank"]) / 2)) / nrow(combs) * 100
+    "Adj.correct.rank" = (length(combs$rank[combs$rank == "Correct rank"]) + (length(combs$rank[combs$rank == "No rank"]) / 2)),
+    "Adj.incorrect.rank" = (length(combs$rank[combs$rank == "Incorrect rank"]) + (length(combs$rank[combs$rank == "No rank"]) / 2))
   )
 }
 
+
+#' Calculate the ranks for a given combination of aneuploidy and dispersals
+#' over 100 replicates
+#'
+#' @param p1 the fractional aneuploidy of embryo 1
+#' @param p2 the fractional aneuploidy of embryo 2
+#' @param d1 the dispersal of embryo 1
+#' @param d2 the dispersal of embryo 2
+#'
+#' @return a named vector with the percentage of biopsies in each rank class over the 100 replicates
 calculate.rank.combo <- function(p1, p2, d1, d2) {
   p <- mcmapply(calculate.ranks,
     p1 = p1, p2 = p2, d1 = d1, d2 = d2, seed1 = 0:100,
     seed2 = 0:100, mc.cores = N.CORES, SIMPLIFY = T
   )
 
+  # Total number of biopsies ranked
+  total <- sum(p["Correct rank", ]) + sum(p["Incorrect rank", ]) + sum(p["No rank", ])
+
+  # Aggregated for combo
   c(
-    "Low aneu" = p1,
-    "High aneu" = p2,
-    "Low disp" = d1,
-    "High disp" = d2,
-    "Correct rank" = mean(p["Correct rank", ]),
-    "Incorrect rank" = mean(p["Incorrect rank", ]),
-    "No rank" = mean(p["No rank", ]),
-    "Adj.correct.rank" = mean(p["Adj.correct.rank", ]),
-    "Adj.incorrect.rank" = mean(p["Adj.incorrect.rank", ])
+    "Low.aneu" = p1,
+    "High.aneu" = p2,
+    "Low.disp" = d1,
+    "High.disp" = d2,
+    "Correct.rank" = sum(p["Correct rank", ]) / total * 100,
+    "Incorrect.rank" = sum(p["Incorrect rank", ]) / total * 100,
+    "No.rank" = sum(p["No rank", ]) / total * 100,
+    "Adj.correct.rank" = sum(p["Adj.correct.rank", ]) / total * 100,
+    "Adj.incorrect.rank" = sum(p["Adj.incorrect.rank", ]) / total * 100
   )
 }
 
@@ -102,14 +128,13 @@ if (!file.exists(out.file)) {
 
 
   output <- as.data.frame(t(result))
-  head(output)
+  output$Aneu.diff <- round(output$High.aneu - output$Low.aneu, digits = 3)
+  # head(output)
 
   write.csv(output, file = "Rank_results.csv", quote = F, row.names = F, col.names = T)
 }
 
 output <- read.csv("Rank_results.csv", header = T)
-output$Aneu.diff <- round(output$High.aneu - output$Low.aneu, digits = 3)
-
 
 correct.plot <- ggplot(output, aes(x = Low.aneu, y = High.aneu, fill = Correct.rank)) +
   geom_tile() +
@@ -149,6 +174,7 @@ incorrect.rank.plot <- ggplot(output, aes(x = Low.aneu, y = High.aneu, fill = In
 save.double.width(incorrect.rank.plot, "Figure xxxx - Rank_output_incorrect", 170)
 
 
+# Aggregate results by difference in aneuploidy and calculate means, SDs
 filt <- output %>%
   # dplyr::filter(Low.disp == 0 & High.disp==0) %>%
   dplyr::group_by(Aneu.diff, Low.disp, High.disp) %>%
@@ -163,9 +189,7 @@ filt <- output %>%
     SD.adj.correct = sd(Adj.correct.rank),
     Mean.adj.incorrect = mean(Adj.incorrect.rank),
     SD.adj.incorrect = sd(Adj.incorrect.rank)
-  ) # %>%
-# dplyr::select(Aneu.diff, Mean.correct, SD.correct) %>%
-# dplyr::distinct()
+  )
 
 
 # Show correct ranks
@@ -215,13 +239,12 @@ save.double.width(out.combined.plot, "Figure xxxx - Ranks_all", 170)
 # Split the values for no.rank between the correct and incorrect
 # Can't get error bars direct from this - recalculate from original values
 out.split.plot <- ggplot(filt, aes(x = Aneu.diff)) +
-  annotate("rect", xmin = 0, xmax = 0.2, ymin = 0, ymax = Inf, fill = "lightgray") +
   geom_hline(yintercept = 50, col = "black") +
   geom_point(aes(y = Mean.adj.incorrect), col = "red") +
-  geom_errorbar(aes(ymin = Mean.adj.incorrect - SD.adj.incorrect, ymax = Mean.adj.incorrect + SD.adj.incorrect), size = 0.5, col='red') +
+  geom_errorbar(aes(ymin = Mean.adj.incorrect - SD.adj.incorrect, ymax = Mean.adj.incorrect + SD.adj.incorrect), size = 0.5, col = "red") +
   geom_point(aes(y = Mean.adj.correct), col = "blue", alpha = 0.5) +
-  geom_errorbar(aes(ymin = Mean.adj.correct - SD.adj.correct, ymax = Mean.adj.correct + SD.adj.correct), size = 0.5, col='blue', alpha=0.5) +
- scale_y_continuous(
+  geom_errorbar(aes(ymin = Mean.adj.correct - SD.adj.correct, ymax = Mean.adj.correct + SD.adj.correct), size = 0.5, col = "blue", alpha = 0.5) +
+  scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
     sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
   ) +
