@@ -54,8 +54,8 @@ calculate.ranks <- function(p1, p2, d1, d2, seed1, seed2) {
     "Incorrect rank" = length(combs$rank[combs$rank == "Incorrect rank"]) / nrow(combs) * 100,
     "No rank" = length(combs$rank[combs$rank == "No rank"]) / nrow(combs) * 100,
     # Split the ties 50:50 between correct and incorrect
-    "Adj.correct.rank" = (length(combs$rank[combs$rank == "Correct rank"])+(length(combs$rank[combs$rank == "No rank"])/2)) / nrow(combs) * 100,
-    "Adj.incorrect.rank" = (length(combs$rank[combs$rank == "Incorrect rank"])+(length(combs$rank[combs$rank == "No rank"])/2)) / nrow(combs) * 100
+    "Adj.correct.rank" = (length(combs$rank[combs$rank == "Correct rank"]) + (length(combs$rank[combs$rank == "No rank"]) / 2)) / nrow(combs) * 100,
+    "Adj.incorrect.rank" = (length(combs$rank[combs$rank == "Incorrect rank"]) + (length(combs$rank[combs$rank == "No rank"]) / 2)) / nrow(combs) * 100
   )
 }
 
@@ -80,8 +80,8 @@ calculate.rank.combo <- function(p1, p2, d1, d2) {
 
 
 # Calculate if results not available
-out.file = "Rank_results.csv"
-if(!file.exists(out.file)){
+out.file <- "Rank_results.csv"
+if (!file.exists(out.file)) {
   aneuploidies <- expand.grid(
     p1 = seq(0, 1, 0.05),
     p2 = seq(0, 1, 0.05),
@@ -90,20 +90,20 @@ if(!file.exists(out.file)){
   )
   # Note - if allowing equal values, need to account for doubling of p1=p2 values
   aneuploidies <- aneuploidies[aneuploidies$p1 <= aneuploidies$p2, ]
-  
+
   result <- mcmapply(calculate.rank.combo,
-                     p1 = aneuploidies$p1,
-                     p2 = aneuploidies$p2,
-                     d1 = aneuploidies$d1,
-                     d2 = aneuploidies$d2,
-                     mc.cores = N.CORES,
-                     SIMPLIFY = T
+    p1 = aneuploidies$p1,
+    p2 = aneuploidies$p2,
+    d1 = aneuploidies$d1,
+    d2 = aneuploidies$d2,
+    mc.cores = N.CORES,
+    SIMPLIFY = T
   )
-  
-  
+
+
   output <- as.data.frame(t(result))
   head(output)
-  
+
   write.csv(output, file = "Rank_results.csv", quote = F, row.names = F, col.names = T)
 }
 
@@ -158,13 +158,17 @@ filt <- output %>%
     Mean.incorrect = mean(Incorrect.rank),
     SD.incorrect = sd(Incorrect.rank),
     Mean.no.rank = mean(No.rank),
-    SD.no.rank = sd(No.rank)
+    SD.no.rank = sd(No.rank),
+    Mean.adj.correct = mean(Adj.correct.rank),
+    SD.adj.correct = sd(Adj.correct.rank),
+    Mean.adj.incorrect = mean(Adj.incorrect.rank),
+    SD.adj.incorrect = sd(Adj.incorrect.rank)
   ) # %>%
 # dplyr::select(Aneu.diff, Mean.correct, SD.correct) %>%
 # dplyr::distinct()
 
-# filt %>% tidyr::pivot_longer(cols=Mean.correct:SD.no.rank, names_to = "Type", values_to = "Value")
 
+# Show correct ranks
 out.correct.plot <- ggplot(filt, aes(x = Aneu.diff, y = Mean.correct)) +
   annotate("rect", xmin = 0, xmax = 0.2, ymin = 0, ymax = Inf, fill = "lightgray") +
   geom_hline(yintercept = 50, col = "black") +
@@ -184,15 +188,16 @@ out.correct.plot <- ggplot(filt, aes(x = Aneu.diff, y = Mean.correct)) +
   )
 save.double.width(out.correct.plot, "Figure xxxx - Rank_correct", 170)
 
+# Show correct, incorrect and no ranks on single plot
 out.combined.plot <- ggplot(filt, aes(x = Aneu.diff)) +
   annotate("rect", xmin = 0, xmax = 0.2, ymin = 0, ymax = Inf, fill = "lightgray") +
   geom_hline(yintercept = 50, col = "black") +
-  geom_point(aes(y = Mean.correct), col='blue') +
-  geom_errorbar(aes(ymin = Mean.correct - SD.correct, ymax = Mean.correct + SD.correct), size = 0.5, col='blue') +
-  geom_point(aes(y=Mean.incorrect), col='red', alpha=0.5)+
-  geom_errorbar(aes(ymin = Mean.incorrect - SD.incorrect, ymax = Mean.incorrect + SD.incorrect), size = 0.5, col='red', alpha=0.5) +
-  geom_point(aes(y=Mean.no.rank), col='black', alpha=0.5)+
-  geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, ymax = Mean.no.rank + SD.no.rank), size = 0.5, col='black', alpha=0.5) +
+  geom_point(aes(y = Mean.correct), col = "blue") +
+  geom_errorbar(aes(ymin = Mean.correct - SD.correct, ymax = Mean.correct + SD.correct), size = 0.5, col = "blue") +
+  geom_point(aes(y = Mean.incorrect), col = "red", alpha = 0.5) +
+  geom_errorbar(aes(ymin = Mean.incorrect - SD.incorrect, ymax = Mean.incorrect + SD.incorrect), size = 0.5, col = "red", alpha = 0.5) +
+  geom_point(aes(y = Mean.no.rank), col = "black", alpha = 0.5) +
+  geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, ymax = Mean.no.rank + SD.no.rank), size = 0.5, col = "black", alpha = 0.5) +
   scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
     sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
@@ -205,20 +210,18 @@ out.combined.plot <- ggplot(filt, aes(x = Aneu.diff)) +
     axis.line.y = element_line(),
     panel.grid.major.y = element_line()
   )
-save.double.width(out.combined.plot, "Figure xxxx - Rank_combined", 170)
+save.double.width(out.combined.plot, "Figure xxxx - Ranks_all", 170)
 
 # Split the values for no.rank between the correct and incorrect
 # Can't get error bars direct from this - recalculate from original values
 out.split.plot <- ggplot(filt, aes(x = Aneu.diff)) +
   annotate("rect", xmin = 0, xmax = 0.2, ymin = 0, ymax = Inf, fill = "lightgray") +
   geom_hline(yintercept = 50, col = "black") +
-  geom_point(aes(y = Mean.correct+(Mean.no.rank/2)), col='blue') +
-  # geom_errorbar(aes(ymin = Mean.correct - SD.correct, ymax = Mean.correct + SD.correct), size = 0.5, col='blue') +
-  geom_point(aes(y=Mean.incorrect+(Mean.no.rank/2)), col='red', alpha=0.5)+
-  # geom_errorbar(aes(ymin = Mean.incorrect - SD.incorrect, ymax = Mean.incorrect + SD.incorrect), size = 0.5, col='red', alpha=0.5) +
-  # geom_point(aes(y=Mean.no.rank), col='black', alpha=0.5)+
-  # geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, ymax = Mean.no.rank + SD.no.rank), size = 0.5, col='black', alpha=0.5) +
-  scale_y_continuous(
+  geom_point(aes(y = Mean.adj.incorrect), col = "red") +
+  geom_errorbar(aes(ymin = Mean.adj.incorrect - SD.adj.incorrect, ymax = Mean.adj.incorrect + SD.adj.incorrect), size = 0.5, col='red') +
+  geom_point(aes(y = Mean.adj.correct), col = "blue", alpha = 0.5) +
+  geom_errorbar(aes(ymin = Mean.adj.correct - SD.adj.correct, ymax = Mean.adj.correct + SD.adj.correct), size = 0.5, col='blue', alpha=0.5) +
+ scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
     sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
   ) +
