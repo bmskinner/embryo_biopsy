@@ -219,30 +219,38 @@ filt <- output %>%
 
 
 # Show correct, incorrect and no ranks for clustered embryos
-out.combined.worst.plot <- ggplot(filt[filt$Low.disp==0 & filt$High.disp==0,], aes(x = Aneu.diff*100)) +
+out.combined.worst.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = Aneu.diff * 100)) +
   geom_hline(yintercept = 50, col = "black") +
-  geom_point(aes(y = Mean.correct, col="Correct", shape="Correct")) +
-  geom_line(aes(y = Mean.correct, col="Correct")) +
-  geom_errorbar(aes(ymin = Mean.correct - SD.correct, 
-                    ymax = Mean.correct + SD.correct, col="Correct"), size = 0.5) +
-
-  geom_point(aes(y = Mean.incorrect, col="Incorrect", shape="Incorrect")) +
-  geom_line(aes(y = Mean.incorrect, col="Incorrect")) +
-  geom_errorbar(aes(ymin = Mean.incorrect - SD.incorrect, 
-                    ymax = Mean.incorrect + SD.incorrect, col="Incorrect"), size = 0.5) +
-  
-  geom_point(aes(y = Mean.no.rank, col="Tied", shape="Tied")) +
-  geom_line(aes(y = Mean.no.rank, col="Tied")) +
-  geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, ymax = Mean.no.rank + SD.no.rank, col="Tied"), size = 0.5) +
+  geom_point(aes(y = Mean.correct, col = "Correct", shape = "Correct")) +
+  geom_line(aes(y = Mean.correct, col = "Correct")) +
+  geom_errorbar(aes(
+    ymin = Mean.correct - SD.correct,
+    ymax = Mean.correct + SD.correct, col = "Correct"
+  ), size = 0.5) +
+  geom_point(aes(y = Mean.incorrect, col = "Incorrect", shape = "Incorrect")) +
+  geom_line(aes(y = Mean.incorrect, col = "Incorrect")) +
+  geom_errorbar(aes(
+    ymin = Mean.incorrect - SD.incorrect,
+    ymax = Mean.incorrect + SD.incorrect, col = "Incorrect"
+  ), size = 0.5) +
+  geom_point(aes(y = Mean.no.rank, col = "Tied", shape = "Tied")) +
+  geom_line(aes(y = Mean.no.rank, col = "Tied")) +
+  geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, ymax = Mean.no.rank + SD.no.rank, col = "Tied"), size = 0.5) +
   scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
   ) +
-  scale_colour_manual(name=element_blank(),
-                      values=c(Correct="blue", Tied="black", Incorrect="red"))+
-  scale_shape_manual(name=element_blank(),
-                     values=c(Correct=16, Tied=15, Incorrect=17))+
-  labs(x = "Aneuploidy difference (%)", y = "Percent embryos with rank order...",
-       color = "Z", shape="Z") +
+  scale_colour_manual(
+    name = element_blank(),
+    values = c(Correct = "blue", Tied = "black", Incorrect = "red")
+  ) +
+  scale_shape_manual(
+    name = element_blank(),
+    values = c(Correct = 16, Tied = 15, Incorrect = 17)
+  ) +
+  labs(
+    x = "Aneuploidy difference (%)", y = "Percent embryos with rank order...",
+    color = "Z", shape = "Z"
+  ) +
   theme_classic() +
   theme(
     axis.line.y = element_line(),
@@ -253,27 +261,37 @@ out.combined.worst.plot <- ggplot(filt[filt$Low.disp==0 & filt$High.disp==0,], a
 
 # Split the values for no.rank between the correct and incorrect
 # Can't get error bars direct from this - recalculate from original values
-out.split.worst.plot <- ggplot(filt[filt$Low.disp==0 & filt$High.disp==0,], aes(x=Aneu.diff*100)) +
+out.split.worst.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = Aneu.diff * 100)) +
   geom_hline(yintercept = 50, col = "black") +
-  geom_point(aes(y = Mean.adj.incorrect, col="Incorrect", shape="Incorrect")) +
-  geom_line(aes(y = Mean.adj.incorrect, col="Incorrect")) +
-  geom_errorbar(aes(ymin = Mean.adj.incorrect - SD.adj.incorrect, 
-                    ymax = Mean.adj.incorrect + SD.adj.incorrect, col="Incorrect"), size = 0.5) +
-  
-  geom_point(aes( y = Mean.adj.correct, col="Correct", shape="Correct" )) +
-  geom_line(aes(,y = Mean.adj.correct, col="Correct")) +
-  geom_errorbar(aes(ymin = Mean.adj.correct - SD.adj.correct, 
-                    ymax = Mean.adj.correct + SD.adj.correct, col="Correct"), 
-                size = 0.5) +
+  geom_point(aes(y = Mean.adj.incorrect, col = "Incorrect", shape = "Incorrect")) +
+  geom_line(aes(y = Mean.adj.incorrect, col = "Incorrect")) +
+  geom_errorbar(aes(
+    ymin = Mean.adj.incorrect - SD.adj.incorrect,
+    ymax = Mean.adj.incorrect + SD.adj.incorrect, col = "Incorrect"
+  ), size = 0.5) +
+  geom_point(aes(y = Mean.adj.correct, col = "Correct", shape = "Correct")) +
+  geom_line(aes(, y = Mean.adj.correct, col = "Correct")) +
+  geom_errorbar(aes(
+    ymin = Mean.adj.correct - SD.adj.correct,
+    ymax = Mean.adj.correct + SD.adj.correct, col = "Correct"
+  ),
+  size = 0.5
+  ) +
   scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
   ) +
-  scale_colour_manual(name=element_blank(),
-                      values=c(Correct="blue", Incorrect="red"))+
-  scale_shape_manual(name=element_blank(),
-                      values=c(Correct=16, Incorrect=17))+
-  labs(x = "Aneuploidy difference (%)", y = "Effective percent embryos\nwith rank order...",
-       color = "Z", shape="Z") +
+  scale_colour_manual(
+    name = element_blank(),
+    values = c(Correct = "blue", Incorrect = "red")
+  ) +
+  scale_shape_manual(
+    name = element_blank(),
+    values = c(Correct = 16, Incorrect = 17)
+  ) +
+  labs(
+    x = "Aneuploidy difference (%)", y = "Effective percent embryos\nwith rank order...",
+    color = "Z", shape = "Z"
+  ) +
   theme_classic() +
   theme(
     axis.line.y = element_line(),
@@ -282,34 +300,42 @@ out.split.worst.plot <- ggplot(filt[filt$Low.disp==0 & filt$High.disp==0,], aes(
     legend.background = element_blank()
   )
 
-save.double.width(out.combined.worst.plot+out.split.worst.plot+plot_annotation(tag_levels = c("A")), "Figure xxxx - Ranks_worst", 85)
+save.double.width(out.combined.worst.plot + out.split.worst.plot + plot_annotation(tag_levels = c("A")), "Figure xxxx - Ranks_worst", 85)
 ################################################################################
 
 # Show correct, incorrect and no ranks on single plot
-out.combined.plot <- ggplot(filt, aes(x = Aneu.diff*100)) +
-  annotate("rect", xmin = 0, xmax = 0.2, ymin = 0, ymax = Inf, fill = "lightgray") +
+out.combined.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
+  annotate("rect", xmin = 0, xmax = 20, ymin = 0, ymax = Inf, fill = "lightgray") +
   geom_hline(yintercept = 50, col = "black") +
-  geom_point(aes(y = Mean.correct, col="Correct", shape="Correct")) +
-  geom_errorbar(aes(ymin = Mean.correct - SD.correct, 
-                    ymax = Mean.correct + SD.correct, col="Correct"), size = 0.5) +
-  
-  geom_point(aes(y = Mean.incorrect, col="Incorrect", shape="Incorrect")) +
-  geom_errorbar(aes(ymin = Mean.incorrect - SD.incorrect, 
-                    ymax = Mean.incorrect + SD.incorrect, col="Incorrect"), size = 0.5) +
-  
-  geom_point(aes(y = Mean.no.rank, col="Tied", shape="Tied")) +
-  geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, 
-                    ymax = Mean.no.rank + SD.no.rank, col="Tied"), size = 0.5) +
-  scale_colour_manual(name=element_blank(),
-                      values=c(Correct="blue", Incorrect="red", Tied="black"))+
-  scale_shape_manual(name=element_blank(),
-                     values=c(Correct=16, Incorrect=17, Tied=15))+
+  geom_point(aes(y = Mean.correct, col = "Correct", shape = "Correct")) +
+  geom_errorbar(aes(
+    ymin = Mean.correct - SD.correct,
+    ymax = Mean.correct + SD.correct, col = "Correct"
+  ), size = 0.5) +
+  geom_point(aes(y = Mean.incorrect, col = "Incorrect", shape = "Incorrect")) +
+  geom_errorbar(aes(
+    ymin = Mean.incorrect - SD.incorrect,
+    ymax = Mean.incorrect + SD.incorrect, col = "Incorrect"
+  ), size = 0.5) +
+  geom_point(aes(y = Mean.no.rank, col = "Tied", shape = "Tied")) +
+  geom_errorbar(aes(
+    ymin = Mean.no.rank - SD.no.rank,
+    ymax = Mean.no.rank + SD.no.rank, col = "Tied"
+  ), size = 0.5) +
+  scale_colour_manual(
+    name = element_blank(),
+    values = c(Correct = "blue", Incorrect = "red", Tied = "black")
+  ) +
+  scale_shape_manual(
+    name = element_blank(),
+    values = c(Correct = 16, Incorrect = 17, Tied = 15)
+  ) +
   scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
     sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
   ) +
   scale_x_continuous(sec.axis = sec_axis(~., name = "Embryo two dispersal", breaks = NULL, labels = NULL)) +
-  labs(x = "Aneuploidy difference (%)", y =  "Percent embryos with rank order...") +
+  labs(x = "Aneuploidy difference (%)", y = "Percent embryos with rank order...") +
   facet_grid(Low.disp ~ High.disp) +
   theme_classic() +
   theme(
@@ -322,19 +348,27 @@ save.double.width(out.combined.plot, "Figure xxxx - Ranks_all", 170)
 
 # Split the values for no.rank between the correct and incorrect
 # Can't get error bars direct from this - recalculate from original values
-out.split.plot <- ggplot(filt, aes(x = Aneu.diff*100)) +
+out.split.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
   geom_hline(yintercept = 50, col = "black") +
-  geom_point(aes(y = Mean.adj.incorrect, col="Incorrect", shape="Incorrect")) +
-  geom_errorbar(aes(ymin = Mean.adj.incorrect - SD.adj.incorrect,
-                    ymax = Mean.adj.incorrect + SD.adj.incorrect, col="Incorrect"), size = 0.5)+
-  geom_point(aes(y = Mean.adj.correct, col="Correct", shape="Correct")) +
-  geom_errorbar(aes(ymin = Mean.adj.correct - SD.adj.correct, 
-                    ymax = Mean.adj.correct + SD.adj.correct, col="Correct"), size = 0.5) +
-  scale_colour_manual(name=element_blank(),
-                      values=c(Correct="blue", Incorrect="red"))+
-  scale_shape_manual(name=element_blank(),
-                     values=c(Correct=16, Incorrect=17))+
-   scale_y_continuous(
+  geom_point(aes(y = Mean.adj.incorrect, col = "Incorrect", shape = "Incorrect")) +
+  geom_errorbar(aes(
+    ymin = Mean.adj.incorrect - SD.adj.incorrect,
+    ymax = Mean.adj.incorrect + SD.adj.incorrect, col = "Incorrect"
+  ), size = 0.5) +
+  geom_point(aes(y = Mean.adj.correct, col = "Correct", shape = "Correct")) +
+  geom_errorbar(aes(
+    ymin = Mean.adj.correct - SD.adj.correct,
+    ymax = Mean.adj.correct + SD.adj.correct, col = "Correct"
+  ), size = 0.5) +
+  scale_colour_manual(
+    name = element_blank(),
+    values = c(Correct = "blue", Incorrect = "red")
+  ) +
+  scale_shape_manual(
+    name = element_blank(),
+    values = c(Correct = 16, Incorrect = 17)
+  ) +
+  scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
     sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
   ) +
