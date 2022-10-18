@@ -4,6 +4,7 @@ library(tidyverse)
 library(svglite)
 library(data.table)
 library(parallel)
+library(patchwork)
 
 # Return the PGDIS class for a given fractional aneuploidy
 to.pgdis.class <- function(f.aneuploidy) {
