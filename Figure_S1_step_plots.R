@@ -29,6 +29,7 @@ calc.step.accuracy <- function(data, all.vals) {
       TotalBiopsies = sum(Count),
       PctBiopsies = Count / TotalBiopsies * 100
     ) %>%
+    dplyr::mutate(PctBiopsies = ifelse(is.nan(PctBiopsies), 0, PctBiopsies)) %>% # if divide by zero gices NaN
     dplyr::distinct() %>%
     dplyr::arrange(Biopsy_size, Dispersal, Aneuploidy, diff_to_embryo) %>%
     dplyr::select(-TotalBiopsies, -Count) %>%
@@ -60,7 +61,7 @@ all.vals <- expand.grid(
   "Count" = 0
 )
 
-step.aneuploidy <- calc.step.accuracy(raw.values[raw.values$Dispersal == 1 & Biopsy_size == 5, ], all.vals)
+step.aneuploidy <- calc.step.accuracy(raw.values[raw.values$Dispersal == 1 & raw.values$Biopsy_size == 5, ], all.vals)
 
 # Calculate step values for dispersal
 # All values for filling out the steps
@@ -75,18 +76,16 @@ all.vals <- expand.grid(
 # Read in the files needed for dispersal step calculation
 step.values <- do.call(rbind, mclapply(list.files(
   path = RAW.DATA.PATH,
-  pattern = "raw_values_a0.2_d.*.csv", full.names = T
+  pattern = "raw_values_e100_a0.2_d.*.csv", full.names = T
 ),
 fread,
 header = T,
-mc.cores = 5
+mc.cores = N.CORES
 ))
-step.dispersal <- calc.step.accuracy(step.values[step.values$Aneuploidy == 0.2 & Biopsy_size == 5, ], all.vals)
 
+figS1A.data <- step.aneuploidy[step.aneuploidy$Aneuploidy %in% round(seq(0, 0.5, 0.05), digits = 2), ]
 
-step.aneuploidy.filt <- step.aneuploidy[step.aneuploidy$Aneuploidy %in% seq(0, 0.5, 0.05), ]
-
-aneuploidy.step.plot <- ggplot(step.aneuploidy.filt, aes(
+figS1A.plot <- ggplot(figS1A.data, aes(
   x = diff_to_embryo * 100, y = CumPct,
   col = Aneuploidy * 100, group = Aneuploidy
 )) +
@@ -101,14 +100,14 @@ aneuploidy.step.plot <- ggplot(step.aneuploidy.filt, aes(
   scale_y_continuous(breaks = seq(0, 100, 20)) +
   theme_classic() +
   theme(
-    legend.position = c(0.85, 0.4),
+    legend.position = c(0.84, 0.4),
     legend.title = element_text(size = 9),
     axis.title = element_text(size = 9)
   )
 
 # Supplementary figure: aneuploidy step plot 0.5-1
-step.aneuploidy.supp <- step.aneuploidy[step.aneuploidy$Aneuploidy %in% seq(0.5, 1.0, 0.05), ]
-aneuploidy.step.plot.supp <- ggplot(step.aneuploidy.supp, aes(
+figS1B.data <- step.aneuploidy[step.aneuploidy$Aneuploidy %in% round(seq(0.5, 1.0, 0.05), digits = 2), ]
+figS1B.plot <- ggplot(figS1B.data, aes(
   x = diff_to_embryo * 100, y = CumPct,
   col = Aneuploidy * 100, group = Aneuploidy
 )) +
@@ -123,16 +122,20 @@ aneuploidy.step.plot.supp <- ggplot(step.aneuploidy.supp, aes(
   scale_y_continuous(breaks = seq(0, 100, 20)) +
   theme_classic() +
   theme(
-    legend.position = c(0.85, 0.4),
+    legend.position = c(0.84, 0.4),
     legend.title = element_text(size = 9),
     axis.title = element_text(size = 9)
   )
-save.single.width(aneuploidy.step.plot.supp, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S1_step"), height = 85)
 
 
 # Dispersal step plot
+figS1C.data <- calc.step.accuracy(step.values[step.values$Aneuploidy == 0.2 &
+  step.values$Biopsy_size == 5 &
+  step.values$Dispersal %in% round(seq(0.0, 1.0, 0.05), digits = 2), ], all.vals)
 
-dispersal.step.plot <- ggplot(step.dispersal, aes(
+
+
+figS1C.plot <- ggplot(figS1C.data, aes(
   x = diff_to_embryo * 100, y = CumPct,
   col = Dispersal, group = Dispersal
 )) +
@@ -146,10 +149,10 @@ dispersal.step.plot <- ggplot(step.dispersal, aes(
   scale_y_continuous(breaks = seq(0, 100, 20)) +
   theme_classic() +
   theme(
-    legend.position = c(0.85, 0.4),
+    legend.position = c(0.84, 0.4),
     legend.title = element_text(size = 9),
     axis.title = element_text(size = 9)
   )
 
-fig2 <- aneuploidy.step.plot + dispersal.step.plot + plot_annotation(tag_levels = c("A"))
-save.double.width(fig2, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_2_step"), height = 85)
+fig2 <- figS1A.plot + figS1B.plot + figS1C.plot + plot_annotation(tag_levels = c("A"))
+save.double.width(fig2, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S1_step_plots"), height = 85)
