@@ -110,4 +110,4 @@ fig7B.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
 
 
 fig7 <- fig7A.plot + fig7B.plot + patchwork::plot_annotation(tag_levels = c("A"))
-save.double.width(fig7, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure 7 - Ranks_zero_dispersal"), 85)
+save.double.width(fig7, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_7_Ranks_zero_dispersal"), 85)
