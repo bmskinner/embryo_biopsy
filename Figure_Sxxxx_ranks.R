@@ -1,5 +1,4 @@
-# Figure 7: effect of aneuploidy differences on rank ordering
-
+# Create supplementary rank plots
 source("parameters.R")
 source("functions.R")
 
@@ -23,30 +22,26 @@ filt <- output %>%
     SD.adj.incorrect = sd(Adj.incorrect.rank)
   )
 
-################################################################################
 
-
-# Show correct, incorrect and no ranks for clustered embryos
-fig7A.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = Aneu.diff * 100)) +
+# Show correct, incorrect and no ranks on single plot
+out.combined.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
+  annotate("rect", xmin = 0, xmax = 20, ymin = 0, ymax = Inf, fill = "lightgray") +
   geom_hline(yintercept = 50, col = "black") +
   geom_point(aes(y = Mean.correct, col = "Correct", shape = "Correct")) +
-  geom_line(aes(y = Mean.correct, col = "Correct")) +
   geom_errorbar(aes(
     ymin = Mean.correct - SD.correct,
     ymax = Mean.correct + SD.correct, col = "Correct"
   ), size = 0.5) +
   geom_point(aes(y = Mean.incorrect, col = "Incorrect", shape = "Incorrect")) +
-  geom_line(aes(y = Mean.incorrect, col = "Incorrect")) +
   geom_errorbar(aes(
     ymin = Mean.incorrect - SD.incorrect,
     ymax = Mean.incorrect + SD.incorrect, col = "Incorrect"
   ), size = 0.5) +
   geom_point(aes(y = Mean.no.rank, col = "Tied", shape = "Tied")) +
-  geom_line(aes(y = Mean.no.rank, col = "Tied")) +
-  geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, ymax = Mean.no.rank + SD.no.rank, col = "Tied"), size = 0.5) +
-  scale_y_continuous(
-    limits = c(0, 100), breaks = seq(0, 100, 20),
-  ) +
+  geom_errorbar(aes(
+    ymin = Mean.no.rank - SD.no.rank,
+    ymax = Mean.no.rank + SD.no.rank, col = "Tied"
+  ), size = 0.5) +
   scale_colour_manual(
     name = element_blank(),
     values = c(Correct = "blue", Tied = "black", Incorrect = "red")
@@ -55,39 +50,36 @@ fig7A.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
     name = element_blank(),
     values = c(Correct = 16, Tied = 15, Incorrect = 17)
   ) +
-  labs(
-    x = "Aneuploidy difference (%)", y = "Percent embryos with rank order...",
-    color = "Z", shape = "Z"
+  scale_y_continuous(
+    limits = c(0, 100), breaks = seq(0, 100, 20),
+    sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
   ) +
+  scale_x_continuous(sec.axis = sec_axis(~., name = "Embryo two dispersal", breaks = NULL, labels = NULL)) +
+  labs(x = "Aneuploidy difference (%)", y = "Percent embryos with rank order...") +
+  facet_grid(Low.disp ~ High.disp) +
   theme_classic() +
   theme(
     axis.line.y = element_line(),
     panel.grid.major.y = element_line(),
-    legend.position = c(0.8, 0.47),
+    legend.position = c(0.9, 0.83),
     legend.background = element_blank()
   )
+save.double.width(out.combined.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure xxxx - Ranks_all"), 170)
 
 # Split the values for no.rank between the correct and incorrect
 # Can't get error bars direct from this - recalculate from original values
-fig7B.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = Aneu.diff * 100)) +
+out.split.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
   geom_hline(yintercept = 50, col = "black") +
   geom_point(aes(y = Mean.adj.incorrect, col = "Incorrect", shape = "Incorrect")) +
-  geom_line(aes(y = Mean.adj.incorrect, col = "Incorrect")) +
   geom_errorbar(aes(
     ymin = Mean.adj.incorrect - SD.adj.incorrect,
     ymax = Mean.adj.incorrect + SD.adj.incorrect, col = "Incorrect"
   ), size = 0.5) +
   geom_point(aes(y = Mean.adj.correct, col = "Correct", shape = "Correct")) +
-  geom_line(aes(, y = Mean.adj.correct, col = "Correct")) +
   geom_errorbar(aes(
     ymin = Mean.adj.correct - SD.adj.correct,
     ymax = Mean.adj.correct + SD.adj.correct, col = "Correct"
-  ),
-  size = 0.5
-  ) +
-  scale_y_continuous(
-    limits = c(0, 100), breaks = seq(0, 100, 20),
-  ) +
+  ), size = 0.5) +
   scale_colour_manual(
     name = element_blank(),
     values = c(Correct = "blue", Incorrect = "red")
@@ -96,18 +88,18 @@ fig7B.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
     name = element_blank(),
     values = c(Correct = 16, Incorrect = 17)
   ) +
-  labs(
-    x = "Aneuploidy difference (%)", y = "Effective percent embryos\nwith rank order...",
-    color = "Z", shape = "Z"
+  scale_y_continuous(
+    limits = c(0, 100), breaks = seq(0, 100, 20),
+    sec.axis = sec_axis(~., name = "Embryo one dispersal", breaks = NULL, labels = NULL)
   ) +
+  scale_x_continuous(sec.axis = sec_axis(~., name = "Embryo two dispersal", breaks = NULL, labels = NULL)) +
+  labs(x = "Aneuploidy difference (%)", y = "Effective percent embryos with rank order...") +
+  facet_grid(Low.disp ~ High.disp) +
   theme_classic() +
   theme(
     axis.line.y = element_line(),
     panel.grid.major.y = element_line(),
-    legend.position = c(0.8, 0.52),
+    legend.position = c(0.9, 0.85),
     legend.background = element_blank()
   )
-
-
-fig7 <- fig7A.plot + fig7B.plot + patchwork::plot_annotation(tag_levels = c("A"))
-save.double.width(fig7, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure 7 - Ranks_zero_dispersal"), 85)
+save.double.width(out.split.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure xxxx - Ranks_split"), 170)

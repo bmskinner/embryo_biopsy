@@ -129,7 +129,7 @@ plot.merge2.heatmap <- function(data, zero.data) {
 
 # Plot PGDIS/merged classification accuracy column charts
 plot.columns <- function(data) {
-  ggplot(data, aes(x = n_aneuploid / b * 100, y = PctTotal, fill = IsCorrect)) +
+  ggplot(data, aes(x = n_aneuploid / Biopsy_size * 100, y = PctTotal, fill = IsCorrect)) +
     geom_hline(yintercept = 50) +
     geom_col(position = "stack") +
     scale_fill_manual(values = c("dark green")) +

@@ -133,4 +133,5 @@ rank.plot.2 <- ggplot(result2, aes(x = rownames(result2), y = mean)) +
   labs(x = "Embryo in pool", y = "Mean rank from biopsies") +
   theme_classic()
 
-save.double.width(rank.plot.1 + rank.plot.2 + plot_annotation(tag_levels = c("A")), "Figure xxxx - Rank_multi_2", 85)
+save.double.width(rank.plot.1 + rank.plot.2 + plot_annotation(tag_levels = c("A")),  
+                  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure xxxx - Rank_multi_2"), 85)
