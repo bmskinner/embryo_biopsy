@@ -109,8 +109,8 @@ calculate.rank.combo <- function(p1, p2, d1, d2) {
 out.file <- "Rank_results.csv"
 if (!file.exists(out.file)) {
   aneuploidies <- expand.grid(
-    p1 = seq(0, 1, 0.05),
-    p2 = seq(0, 1, 0.05),
+    p1 = seq(0, 1, 0.01),
+    p2 = seq(0, 1, 0.01),
     d1 = seq(0, 1, 0.5),
     d2 = seq(0, 1, 0.5)
   )
@@ -324,11 +324,11 @@ out.combined.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
   ), size = 0.5) +
   scale_colour_manual(
     name = element_blank(),
-    values = c(Correct = "blue", Incorrect = "red", Tied = "black")
+    values = c(Correct = "blue" , Tied = "black", Incorrect = "red")
   ) +
   scale_shape_manual(
     name = element_blank(),
-    values = c(Correct = 16, Incorrect = 17, Tied = 15)
+    values = c(Correct = 16, Tied = 15, Incorrect = 17)
   ) +
   scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
