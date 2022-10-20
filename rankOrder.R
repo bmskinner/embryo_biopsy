@@ -106,7 +106,7 @@ calculate.rank.combo <- function(p1, p2, d1, d2) {
 
 
 # Calculate if results not available
-out.file <- "Rank_results.csv"
+out.file <- "data/Rank_results.csv"
 if (!file.exists(out.file)) {
   aneuploidies <- expand.grid(
     p1 = seq(0, 1, 0.01),
@@ -131,5 +131,5 @@ if (!file.exists(out.file)) {
   output$Aneu.diff <- round(output$High.aneu - output$Low.aneu, digits = 3)
   # head(output)
 
-  write.csv(output, file = "Rank_results.csv", quote = F, row.names = F, col.names = T)
+  write.csv(output, file = "data/Rank_results.csv", quote = F, row.names = F, col.names = T)
 }

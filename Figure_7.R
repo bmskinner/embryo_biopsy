@@ -4,7 +4,7 @@ source("parameters.R")
 source("functions.R")
 
 # # Read the saved raw values
-output <- read.csv("Rank_results.csv", header = T)
+output <- read.csv("data/Rank_results.csv", header = T)
 
 # Aggregate results by difference in aneuploidy and calculate means, SDs
 filt <- output %>%
@@ -29,27 +29,43 @@ filt <- output %>%
 # Show correct, incorrect and no ranks for clustered embryos
 fig7A.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = Aneu.diff * 100)) +
   geom_hline(yintercept = 50, col = "black") +
-  geom_point(aes(y = Mean.correct, col = "Correct", shape = "Correct")) +
+  geom_point(aes(y = Mean.correct, col = "Correct", shape = "Correct"), size=0.5) +
   geom_line(aes(y = Mean.correct, col = "Correct")) +
-  geom_errorbar(aes(
-    ymin = Mean.correct - SD.correct,
-    ymax = Mean.correct + SD.correct, col = "Correct"
-  ), size = 0.5) +
-  geom_point(aes(y = Mean.incorrect, col = "Incorrect", shape = "Incorrect")) +
+  # geom_errorbar(aes(
+  #   ymin = Mean.correct - SD.correct,
+  #   ymax = Mean.correct + SD.correct, col = "Correct"
+  # ), size = 0.5) +
+  geom_ribbon(aes(ymin = Mean.correct - SD.correct,
+                  ymax = Mean.correct + SD.correct, 
+                  fill="Correct"), alpha=0.5, col = NA)+
+  
+  geom_point(aes(y = Mean.incorrect, col = "Incorrect", shape = "Incorrect"), size=0.5) +
   geom_line(aes(y = Mean.incorrect, col = "Incorrect")) +
-  geom_errorbar(aes(
-    ymin = Mean.incorrect - SD.incorrect,
-    ymax = Mean.incorrect + SD.incorrect, col = "Incorrect"
-  ), size = 0.5) +
-  geom_point(aes(y = Mean.no.rank, col = "Tied", shape = "Tied")) +
+  # geom_errorbar(aes(
+  #   ymin = Mean.incorrect - SD.incorrect,
+  #   ymax = Mean.incorrect + SD.incorrect, col = "Incorrect"
+  # ), size = 0.5) +
+  geom_ribbon(aes(ymin = Mean.incorrect - SD.incorrect,
+                  ymax = Mean.incorrect + SD.incorrect, 
+                  fill="Incorrect"), alpha=0.5, col = NA)+
+  
+  geom_point(aes(y = Mean.no.rank, col = "Tied", shape = "Tied"), size=0.5) +
   geom_line(aes(y = Mean.no.rank, col = "Tied")) +
-  geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, ymax = Mean.no.rank + SD.no.rank, col = "Tied"), size = 0.5) +
+  # geom_errorbar(aes(ymin = Mean.no.rank - SD.no.rank, ymax = Mean.no.rank + SD.no.rank, col = "Tied"), size = 0.5) +
+  geom_ribbon(aes(ymin = Mean.no.rank - SD.no.rank,
+                  ymax = Mean.no.rank + SD.no.rank, 
+                  fill="Tied"), alpha=0.5, col = NA)+
   scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
   ) +
   scale_colour_manual(
     name = element_blank(),
     values = c(Correct = "blue", Tied = "black", Incorrect = "red")
+  ) +
+  scale_fill_manual(
+    name = element_blank(),
+    values = c(Correct = "blue", Tied = "black", Incorrect = "red"),
+    guide="none"
   ) +
   scale_shape_manual(
     name = element_blank(),
@@ -71,26 +87,37 @@ fig7A.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
 # Can't get error bars direct from this - recalculate from original values
 fig7B.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = Aneu.diff * 100)) +
   geom_hline(yintercept = 50, col = "black") +
-  geom_point(aes(y = Mean.adj.incorrect, col = "Incorrect", shape = "Incorrect")) +
+  geom_point(aes(y = Mean.adj.incorrect, col = "Incorrect", shape = "Incorrect"), size=0.5) +
   geom_line(aes(y = Mean.adj.incorrect, col = "Incorrect")) +
-  geom_errorbar(aes(
-    ymin = Mean.adj.incorrect - SD.adj.incorrect,
-    ymax = Mean.adj.incorrect + SD.adj.incorrect, col = "Incorrect"
-  ), size = 0.5) +
-  geom_point(aes(y = Mean.adj.correct, col = "Correct", shape = "Correct")) +
+  geom_ribbon(aes(ymin = Mean.adj.incorrect - SD.adj.incorrect,
+                  ymax = Mean.adj.incorrect + SD.adj.incorrect, 
+                  fill="Incorrect"), alpha=0.5, col = NA)+
+  # geom_errorbar(aes(
+  #   ymin = Mean.adj.incorrect - SD.adj.incorrect,
+  #   ymax = Mean.adj.incorrect + SD.adj.incorrect, col = "Incorrect"
+  # ), size = 0.5) +
+  geom_point(aes(y = Mean.adj.correct, col = "Correct", shape = "Correct"), size=0.5) +
   geom_line(aes(, y = Mean.adj.correct, col = "Correct")) +
-  geom_errorbar(aes(
-    ymin = Mean.adj.correct - SD.adj.correct,
-    ymax = Mean.adj.correct + SD.adj.correct, col = "Correct"
-  ),
-  size = 0.5
-  ) +
+  # geom_errorbar(aes(
+  #   ymin = Mean.adj.correct - SD.adj.correct,
+  #   ymax = Mean.adj.correct + SD.adj.correct, col = "Correct"
+  # ),
+  # size = 0.5
+  # ) +
+  geom_ribbon(aes(ymin = Mean.adj.correct - SD.adj.correct,
+                  ymax = Mean.adj.correct + SD.adj.correct, 
+                  fill = "Correct"), alpha=0.5, col = NA)+
   scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
   ) +
   scale_colour_manual(
     name = element_blank(),
     values = c(Correct = "blue", Incorrect = "red")
+  ) +
+  scale_fill_manual(
+    name = element_blank(),
+    values = c(Correct = "blue", Incorrect = "red"),
+    guide="none"
   ) +
   scale_shape_manual(
     name = element_blank(),
@@ -111,3 +138,4 @@ fig7B.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
 
 fig7 <- fig7A.plot + fig7B.plot + patchwork::plot_annotation(tag_levels = c("A"))
 save.double.width(fig7, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_7_Ranks_zero_dispersal"), 85)
+

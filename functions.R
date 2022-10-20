@@ -48,16 +48,16 @@ save.double.width <- function(plot, filename, height) {
 
 # Make a basic heatmap with no rectangle annotations
 plot.heatmap <- function(data, zero.data) {
-  ggplot(data, aes(x = f_aneuploid, y = Aneuploidy, fill = PctTotal)) +
+  ggplot(data, aes(x = f_aneuploid, y = Aneuploidy * 100, fill = PctTotal)) +
     geom_raster(data = zero.data) +
     geom_raster() +
     scale_fill_viridis_c() +
     labs(
-      x = "Biopsy aneuploidy",
-      y = "Embryo aneuploidy",
+      x = "Biopsy aneuploidy (%)",
+      y = "Embryo aneuploidy (%)",
       fill = "Percentage\nof biopsies"
     ) +
-    scale_y_continuous(breaks = seq(0, 1, 0.1)) +
+    scale_y_continuous(breaks = seq(0, 100, 20)) +
     scale_x_continuous(breaks = seq(0, 100, 20)) +
     theme_classic() +
     facet_wrap(~Dispersal, ncol = 3) +
@@ -76,19 +76,19 @@ plot.heatmap <- function(data, zero.data) {
 plot.pgdis.heatmap <- function(data, zero.data) {
   plot.heatmap(data, zero.data) +
     geom_rect(
-      xmin = -10, xmax = 10, ymin = -0.025, ymax = 0.195,
+      xmin = -10, xmax = 10, ymin = -2.5, ymax = 19.5,
       fill = NA, col = "white", size = 1
     ) +
     geom_rect(
-      xmin = 10, xmax = 30, ymin = 0.195, ymax = 0.395,
+      xmin = 10, xmax = 30, ymin = 19.5, ymax = 39.5,
       fill = NA, col = "white", size = 1
     ) +
     geom_rect(
-      xmin = 30, xmax = 90, ymin = 0.395, ymax = 0.805,
+      xmin = 30, xmax = 90, ymin = 39.5, ymax = 80.5,
       fill = NA, col = "white", size = 1
     ) +
     geom_rect(
-      xmin = 90, xmax = 110, ymin = 0.805, ymax = 1.025,
+      xmin = 90, xmax = 110, ymin = 80.5, ymax = 102.5,
       fill = NA, col = "white", size = 1
     )
 }
@@ -97,32 +97,15 @@ plot.pgdis.heatmap <- function(data, zero.data) {
 plot.merge.heatmap <- function(data, zero.data) {
   plot.heatmap(data, zero.data) +
     geom_rect(
-      xmin = -10, xmax = 10, ymin = -0.025, ymax = 0.195,
+      xmin = -10, xmax = 10, ymin = -2.5, ymax = 19.5,
       fill = NA, col = "white", size = 1
     ) +
     geom_rect(
-      xmin = 10, xmax = 90, ymin = 0.195, ymax = 0.825,
+      xmin = 10, xmax = 90, ymin = 19.5, ymax = 82.5,
       fill = NA, col = "white", size = 1
     ) +
     geom_rect(
-      xmin = 90, xmax = 110, ymin = 0.825, ymax = 1.025,
-      fill = NA, col = "white", size = 1
-    )
-}
-
-# Make a heatmap with merged class annotations 10% and 90%
-plot.merge2.heatmap <- function(data, zero.data) {
-  plot.heatmap(data, zero.data) +
-    geom_rect(
-      xmin = -10, xmax = 10, ymin = -0.025, ymax = 0.095,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 10, xmax = 90, ymin = 0.095, ymax = 0.905,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 90, xmax = 110, ymin = 0.905, ymax = 1.025,
+      xmin = 90, xmax = 110, ymin = 82.5, ymax = 102.5,
       fill = NA, col = "white", size = 1
     )
 }
@@ -138,7 +121,7 @@ plot.columns <- function(data) {
     coord_cartesian(ylim = c(0, 100)) +
     labs(
       y = "Percentage of embryos\nmatching biopsy class",
-      x = "Biopsy aneuploidy"
+      x = "Biopsy aneuploidy (%)"
     ) +
     facet_wrap(~Dispersal, ncol = 3) +
     theme_classic() +
