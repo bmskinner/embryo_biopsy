@@ -36,7 +36,7 @@ zero.data <- expand.grid(
   pct_biopsies = 0
 )
 
-p <- ggplot(biopsy.aggregate, aes(x = Aneuploidy*100, y = Dispersal, fill = pct_biopsies)) +
+p <- ggplot(biopsy.aggregate, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_biopsies)) +
   geom_raster(data = zero.data) +
   geom_raster() +
   labs(fill = "Percent of\nbiopsies", x = "Embryo aneuploidy (%)", y = "Embryo dispersal") +

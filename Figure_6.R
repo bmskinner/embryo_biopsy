@@ -134,7 +134,7 @@ fig6C.png <- readPNG(paste0(FIGURE.OUTPUT.DIR, "/Figure_6C_predictive.png"))
 fig6D.png <- readPNG(paste0(FIGURE.OUTPUT.DIR, "/Figure_6D_predictive.png"))
 
 # setup plot
-dev.off()
+
 png(filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_6_predictive.png"), width = 170, height = 170, units = "mm", res = 300)
 par(mai = rep(0, 4)) # no margins
 
