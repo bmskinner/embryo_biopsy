@@ -13,6 +13,7 @@ source("functions.R")
 
 in.file <- "data/Mosaic Embryo Transfers Sent.xlsx"
 
+# Read the spreadsheet and clean the data
 data <- readxl::read_xlsx(in.file,
   sheet = "Sheet2", range = "A2:N1734",
   col_names = c(
@@ -70,7 +71,8 @@ data <- readxl::read_xlsx(in.file,
       is.auto.and.sex ~ "Auto and sex chrs",
       T ~ "Sex chrs only"
     )
-  )
+  ) %>%
+  dplyr::filter(seg_type != "Unclear")
 
 
 
@@ -79,19 +81,22 @@ data <- readxl::read_xlsx(in.file,
 # Implantation results
 
 imp.data <- data %>%
-  dplyr::group_by(bin, seg_type, chr_type) %>%
+  dplyr::group_by(bin, seg_type) %>%
   dplyr::mutate(total_embryos = n()) %>%
-  dplyr::group_by(bin, implantation_sac, seg_type, chr_type) %>%
+  dplyr::group_by(bin, implantation_sac, seg_type) %>%
   dplyr::mutate(
     implanated_embryos = n(),
     f_implanted_embryos = implanated_embryos / total_embryos
   ) %>%
   dplyr::select(bin, seg_type, total_embryos, implanated_embryos, f_implanted_embryos) %>%
   dplyr::distinct() %>%
-  dplyr::filter(implantation_sac == 1)
+  dplyr::filter(implantation_sac == 1) %>%
+  dplyr::filter(seg_type != "Unclear")
+
+
 
 # Check aneuploidy and segmntal type in glm
-imp.glm <- glm(implantation_sac ~ level_aneuploidy + seg_type + chr_type, family = binomial(link = "logit"), data = data)
+imp.glm <- glm(implantation_sac ~ level_aneuploidy + seg_type, family = binomial(link = "logit"), data = data)
 summary(imp.glm)
 # Is the model useful? Strong lack of support for the null hypothesis
 pchisq(imp.glm$null.deviance - imp.glm$deviance, imp.glm$df.null - imp.glm$df.residual, lower.tail = F)
@@ -114,9 +119,10 @@ imp.plot <- ggplot(imp.data, aes(x = as.integer(bin), y = f_implanted_embryos)) 
   ) +
   labs(x = "Aneuploidy bin", y = "Fraction of embryos implanted") +
   theme_bw() +
-  facet_grid(chr_type ~ seg_type)
+  facet_grid(. ~ seg_type) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
 
-save.double.width(imp.plot, filename = "figure/Figure_8_implantation", height = 170)
+save.double.width(imp.plot, filename = "figure/Figure_9_implantation", height = 85)
 
 
 
@@ -124,19 +130,20 @@ save.double.width(imp.plot, filename = "figure/Figure_8_implantation", height = 
 
 # Birth outcomes, as for the implantation data
 birth.data <- data %>%
-  dplyr::group_by(bin, seg_type, chr_type) %>%
+  dplyr::group_by(bin, seg_type) %>%
   dplyr::mutate(total_embryos = n()) %>%
-  dplyr::group_by(bin, ongoing_birth, seg_type, chr_type) %>%
+  dplyr::group_by(bin, ongoing_birth, seg_type) %>%
   dplyr::mutate(
     n_outcomes = n(),
     f_outcomes = n_outcomes / total_embryos
   ) %>%
   dplyr::select(bin, seg_type, total_embryos, n_outcomes, f_outcomes) %>%
   dplyr::distinct() %>%
-  dplyr::filter(ongoing_birth == 1)
+  dplyr::filter(ongoing_birth == 1) %>%
+  dplyr::filter(seg_type != "Unclear")
 
 # Check aneuploidy and segmntal type in glm
-birth.glm <- glm(ongoing_birth ~ level_aneuploidy + seg_type + chr_type, family = binomial(link = "logit"), data = data)
+birth.glm <- glm(ongoing_birth ~ level_aneuploidy + seg_type, family = binomial(link = "logit"), data = data)
 summary(birth.glm)
 # Is the model useful? Strong lack of support for the null hypothesis
 pchisq(birth.glm$null.deviance - birth.glm$deviance, birth.glm$df.null - birth.glm$df.residual, lower.tail = F)
@@ -145,9 +152,6 @@ pchisq(birth.glm$null.deviance - birth.glm$deviance, birth.glm$df.null - birth.g
 deviance.diff <- birth.glm$null.deviance - birth.glm$deviance
 deviance.diff / birth.glm$null.deviance * 100
 # Very little of the variation (~1%) is explained by this model
-
-
-
 
 birth.plot <- ggplot(birth.data, aes(x = as.integer(bin), y = f_outcomes)) +
   geom_hline(yintercept = 0.5, size = 1) +
@@ -162,9 +166,10 @@ birth.plot <- ggplot(birth.data, aes(x = as.integer(bin), y = f_outcomes)) +
   ) +
   labs(x = "Aneuploidy bin", y = "Fraction of births") +
   theme_bw() +
-  facet_grid(chr_type ~ seg_type)
+  facet_grid(. ~ seg_type) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
 
-save.double.width(birth.plot, filename = "figure/Figure_9_births", height = 170)
+save.double.width(birth.plot, filename = "figure/Figure_9_births", height = 85)
 
 
 
