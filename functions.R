@@ -34,16 +34,20 @@ to.merged.class.2 <- function(f.aneuploidy) {
   )
 }
 
+# Save a plot with arbirary dimensions (in mm)
+save.plot<- function(plot, filename, width, height) {
+  ggsave(plot, filename = paste0(filename, ".png"), dpi = 300, units = "mm", width = width, height = height)
+  ggsave(plot, filename = paste0(filename, ".svg"), dpi = 300, units = "mm", width = width, height = height)
+}
+
 # Save a plot as single column width (85mm)
 save.single.width <- function(plot, filename, height) {
-  ggsave(plot, filename = paste0(filename, ".png"), dpi = 300, units = "mm", width = 85, height = height)
-  ggsave(plot, filename = paste0(filename, ".svg"), dpi = 300, units = "mm", width = 85, height = height)
+  save.plot(plot, filename, 85, height)
 }
 
 # Save a plot as double column width (170mm)
 save.double.width <- function(plot, filename, height) {
-  ggsave(plot, filename = paste0(filename, ".png"), dpi = 300, units = "mm", width = 170, height = height)
-  ggsave(plot, filename = paste0(filename, ".svg"), dpi = 300, units = "mm", width = 170, height = height)
+  save.plot(plot, filename, 170, height)
 }
 
 # Make a basic heatmap with no rectangle annotations

@@ -45,8 +45,32 @@ data <- readxl::read_xlsx(in.file,
       reported_outcome == "Terminated" ~ "Terminated",
       str_detect(reported_outcome, "Abortion") ~ "Abortion",
       T ~ reported_outcome
+    ),
+    has.segmental = str_detect(mosaic_result, "[S|s]egmental") | str_detect(type, "[S|s]egmental")| str_detect(mosaic_result, "partial"),
+    has.whole     = str_detect(mosaic_result, "([W|w]ho[el|le])+") | str_detect(type, "(Monosomy|Trisomy)"),
+    has.pq        = str_detect(mosaic_result, "[\\d+|X|Y][p|q]+"),
+    has.gain.loss = str_detect(mosaic_result, "(gain|loss)+"),
+    has.mono.tri  = str_detect(mosaic_result, "([M|m]ono(somy)?|[T|t]ri(somy)?)"),
+    just.complex  = str_detect(mosaic_result, "mos\\([C|c]omplex\\)"),
+    affects.sex.chr = str_detect(mosaic_result, "X|Y"),
+    not.X         = str_detect(mosaic_result, "^(?:(?!X).)*$"),
+    not.Y         = str_detect(mosaic_result, "^(?:(?!Y).)*$"),
+    is.autosomal.only  = !affects.sex.chr,
+    has.autosome   =  str_detect(mosaic_result, "[^pq]\\d+"),
+    is.auto.and.sex    = affects.sex.chr & has.autosome,
+    seg_type = case_when(
+      (has.segmental| has.pq) & has.whole ~ "Segmental and whole",
+      has.segmental | has.pq ~ "Segmental",
+      has.whole | has.mono.tri ~ "Whole chromosome",
+      just.complex ~ "Unclear",
+      T ~ "Whole chromosome"), # remainder that cannot be assigned segmental
+    chr_type = case_when(
+      is.autosomal.only ~ "Autosomal only",
+      is.auto.and.sex ~ "Auto and sex chrs",
+      T~ "Sex chrs only"
     )
-  )
+    )
+  
 
 
 ################################################################################
@@ -54,44 +78,106 @@ data <- readxl::read_xlsx(in.file,
 # Implantation results
 
 imp.data <- data %>%
-  dplyr::group_by(bin) %>%
+  dplyr::group_by(bin, seg_type, chr_type) %>%
   dplyr::mutate(total_embryos = n()) %>%
-  dplyr::group_by(bin, implantation_sac) %>%
+  dplyr::group_by(bin, implantation_sac, seg_type, chr_type) %>%
   dplyr::mutate(
     implanated_embryos = n(),
     f_implanted_embryos = implanated_embryos / total_embryos
   ) %>%
-  dplyr::select(bin, implanated_embryos, f_implanted_embryos) %>%
+  dplyr::select(bin,seg_type, total_embryos, implanated_embryos, f_implanted_embryos) %>%
   dplyr::distinct() %>%
   dplyr::filter(implantation_sac == 1)
 
+# Check aneuploidy and segmntal type in glm
+imp.glm <- glm(implantation_sac ~ level_aneuploidy+seg_type+chr_type, family = binomial(link = "logit"), data = data)
+summary(imp.glm)
+# Is the model useful? Strong lack of support for the null hypothesis
+pchisq(imp.glm$null.deviance - imp.glm$deviance, imp.glm$df.null-imp.glm$df.residual, lower.tail = F)
 
-imp.plot <- ggplot(imp.data, aes(x = bin, y = f_implanted_embryos)) +
-  geom_col() +
-  labs(x = "Aneuploidy (%)", y = "Fraction of embryos implanted") +
-  theme_classic() +
-  theme(legend.position = "none")
+# What does the model explain?
+deviance.diff = imp.glm$null.deviance-imp.glm$deviance
+deviance.diff/imp.glm$null.deviance*100
+# Very little of the variation (~1%) is explained by this model
 
-# Remove segmental results
+imp.plot <- ggplot(imp.data, aes(x = as.integer(bin), y = f_implanted_embryos)) +
+  geom_hline(yintercept = 0.5, size=1)+
+  geom_point() +
+  # geom_line()+
+  geom_smooth(method = "lm")+
+  geom_text(aes(label=total_embryos, y =0.05))+
+  scale_y_continuous(limits = c(0, 1))+
+  scale_x_continuous(labels = function(x) levels(data$bin)[x], 
+                     breaks = seq(0, 7, 1))+
+  labs(x = "Aneuploidy bin", y = "Fraction of embryos implanted") +
+  theme_bw()+
+  facet_grid(chr_type~seg_type)
 
-implantation.no.segmentatals <- data %>%
-  dplyr::filter(!(str_detect(type, "Segmental"))) %>%
-  dplyr::group_by(bin) %>%
+save.double.width(imp.plot, filename = "figure/Figure_8_implantation", height = 170)
+
+
+
+
+
+# Birth outcomes, as for the implantation data
+birth.data <- data %>%
+  dplyr::group_by(bin, seg_type, chr_type) %>%
   dplyr::mutate(total_embryos = n()) %>%
-  dplyr::group_by(bin, implantation_sac) %>%
+  dplyr::group_by(bin, ongoing_birth, seg_type, chr_type) %>%
   dplyr::mutate(
-    implanated_embryos = n(),
-    f_implanted_embryos = implanated_embryos / total_embryos
+    n_outcomes = n(),
+    f_outcomes = n_outcomes / total_embryos
   ) %>%
-  dplyr::select(bin, implanated_embryos, f_implanted_embryos) %>%
+  dplyr::select(bin,seg_type, total_embryos, n_outcomes, f_outcomes) %>%
   dplyr::distinct() %>%
-  dplyr::filter(implantation_sac == 1)
+  dplyr::filter(ongoing_birth == 1)
 
-imp.no.seg.plot <- ggplot(implantation.no.segmentatals, aes(x = bin, y = f_implanted_embryos)) +
-  geom_col() +
-  labs(x = "Aneuploidy (%)", y = "Fraction of embryos implanted") +
-  theme_classic() +
-  theme(legend.position = "none")
+# Check aneuploidy and segmntal type in glm
+birth.glm <- glm(ongoing_birth ~ level_aneuploidy+seg_type+chr_type, family = binomial(link = "logit"), data = data)
+summary(birth.glm)
+# Is the model useful? Strong lack of support for the null hypothesis
+pchisq(birth.glm$null.deviance - birth.glm$deviance,  birth.glm$df.null-birth.glm$df.residual, lower.tail = F)
+
+# What does the model explain?
+deviance.diff = birth.glm$null.deviance-birth.glm$deviance
+deviance.diff/birth.glm$null.deviance*100
+# Very little of the variation (~1%) is explained by this model
+
+
+
+
+birth.plot <- ggplot(birth.data, aes(x = as.integer(bin), y = f_outcomes)) +
+  geom_hline(yintercept = 0.5, size=1)+
+  geom_point() +
+  # geom_line()+
+  geom_smooth(method = "lm")+
+  geom_text(aes(label=total_embryos, y =0.05))+
+  scale_y_continuous(limits = c(0, 1))+
+  scale_x_continuous(labels = function(x) levels(data$bin)[x], 
+                     breaks = seq(0, 7, 1))+
+  labs(x = "Aneuploidy bin", y = "Fraction of births") +
+  theme_bw()+
+  facet_grid(chr_type~seg_type)
+
+save.double.width(birth.plot, filename = "figure/Figure_9_births", height = 170)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Implantation by PGDIS classes
 
@@ -172,7 +258,9 @@ imp.split.no.seg.plot <- ggplot(imp.split.no.seg.data, aes(x = split_class, y = 
 (imp.plot + imp.no.seg.plot) / (imp.pgdis.plot + imp.pgdis.no.seg.plot) / (imp.split.plot + imp.split.no.seg.plot) + plot_annotation(tag_levels = c("A"))
 
 
+imp.plot + imp.no.seg.plot
 
+# Split to all, whole chr and segmental mosaics
 
 ################################################################################
 
