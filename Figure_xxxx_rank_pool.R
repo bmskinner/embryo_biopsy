@@ -13,20 +13,37 @@ pool.results <- read.csv(out.file, header = T)
 
 # Summarise the raw data
 summ <- pool.results %>%
-  dplyr::group_by(disp) %>%
+  dplyr::group_by(disp, pool.size, best.size) %>%
   dplyr::summarise(
     MeanPct = mean(pct.correct),
     MedianPct = median(pct.correct),
     SdPct = sd(pct.correct)
   )
 
-# Make the plot
-ggplot(summ, aes(x = disp, y = MeanPct, group = disp)) +
-  geom_hline(yintercept = 50) +
-  geom_ribbon(aes(ymin = MeanPct - SdPct, ymax = MeanPct + SdPct)) +
-  geom_errorbar(aes(ymin = MeanPct - SdPct, ymax = MeanPct + SdPct)) +
+# Make the full plot
+p1 <- ggplot(summ, aes(x = disp, y = MeanPct)) +
+  # geom_hline(yintercept = 50) +
+  geom_ribbon(aes(x = disp, ymin = MeanPct - SdPct, ymax = MeanPct + SdPct), fill="darkgrey", alpha=0.5) +
   geom_point() +
   labs(x = "Dispersal", y = "Mean percent correctly selected embryos") +
-  coord_cartesian(ylim = c(0, 110)) +
-  scale_y_continuous(breaks = seq(0, 110, 10)) +
+  coord_cartesian(ylim = c(40, 110)) +
+  scale_y_continuous(breaks = seq(0, 150, 10), 
+                     sec.axis = sec_axis(~ . , name = "Numner of selected embryos", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~ . , name = "Embryo pool size", breaks = NULL, labels = NULL))+
+  facet_grid(best.size~pool.size)+
   theme_bw()
+
+save.double.width(p1, height=170, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_xxxx_rank_pool"))
+
+
+# Make a plot with just a single pool size
+filt <- summ %>% dplyr::filter(pool.size==6, best.size==3)
+p2 <- ggplot(filt, aes(x = disp, y = MeanPct)) +
+  # geom_hline(yintercept = 50) +
+  geom_ribbon(aes(x = disp, ymin = MeanPct - SdPct, ymax = MeanPct + SdPct), fill="darkgrey", alpha=0.5) +
+  geom_point() +
+  labs(x = "Dispersal", y = "Mean percent correctly selected embryos") +
+  coord_cartesian(ylim = c(40, 110)) +
+  scale_y_continuous(breaks = seq(0, 150, 10))+
+  theme_bw()
+save.single.width(p2, height=85, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_xxxx_rank_pool_single"))
