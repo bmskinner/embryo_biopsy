@@ -129,7 +129,74 @@ if (!file.exists(out.file)) {
 
   output <- as.data.frame(t(result))
   output$Aneu.diff <- round(output$High.aneu - output$Low.aneu, digits = 3)
-  # head(output)
 
   write.csv(output, file = "data/Rank_results.csv", quote = F, row.names = F, col.names = T)
+}
+
+
+# We also want to consider multiple embryos. How well can we select the best n
+# embryos from a pool of m embryos?
+
+# For i replicates at a given dispersal:
+#   create a pool of m embryos with differing aneuploidies
+#   biopsy each embryo and rank
+#   select the best n embryos from biopsy
+#   compare to the true rank order (how many matches to the true n?)
+#     yields a percent correctly selected for the pool
+# show the distribution of correct percents per dispersal
+out.file <- "data/Rank_pool_results.csv"
+if (!file.exists(out.file)) {
+  POOL.SIZES <- seq(4, 10, 2) # number of embryos in the pool
+  replicates <- 100 # number of pools to make for each dispersal
+
+  pool.results <- c()
+
+  for (pool.size in POOL.SIZES) {
+    best.sizes <- seq(2, pool.size, 1) # number of embryos to select for transfer
+
+    for (best.size in best.sizes) {
+      cat("Pool:", pool.size, "  Best:", best.size, "\n")
+
+      for (disp in DISPERSAL.RANGE) {
+
+        # Create an embryo with the given aneuploidy and seed, and take one random biopsy
+        get.biopsy <- function(a, s) {
+          e <- tessera::Embryo(n.cells = 200, n.chrs = 1, prop.aneuploid = a, dispersal = disp, rng.seed = s)
+          tessera::takeBiopsy(e)
+        }
+
+        # find the percentage of embryos correctly selected by biopsy from a pool
+        get.pct.correct <- function(i) {
+
+          # different set of embryos for each iteration
+          # biopsy will also be different even if embryo is reused
+          seeds <- i:(i + (pool.size - 1))
+
+          # Create a new random set of aneuploidies for each iteration
+          aneuploidies <- runif(pool.size, min = 0, max = 1)
+          biopsies <- mapply(get.biopsy, a = aneuploidies, s = seeds)
+
+          # Rank the embryos by aneuploidy
+          best.from.biopsy <- which(biopsies %in% sort(biopsies)[1:best.size])
+          best.from.reality <- which(aneuploidies %in% sort(aneuploidies)[1:best.size])
+
+          # Calculate the percent of embryos correctly selected for transfer by biopsy
+          pct.corrrect <- sum(best.from.biopsy %in% best.from.reality) / best.size * 100
+          pct.corrrect
+        }
+
+        correct.pcts <- sapply(1:replicates, get.pct.correct)
+
+        pool.results <- rbind(pool.results, data.frame(
+          "disp" = disp,
+          "pct.correct" = correct.pcts,
+          "pool.size" = pool.size,
+          "best.size" = best.size
+        ))
+      }
+    }
+  }
+
+  write.csv(pool.results, file = out.file, quote = F, row.names = F, col.names = T)
+  # Figures generated in Figure_xxxx_rank_pool.R
 }

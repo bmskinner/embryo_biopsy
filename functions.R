@@ -35,7 +35,7 @@ to.merged.class.2 <- function(f.aneuploidy) {
 }
 
 # Save a plot with arbirary dimensions (in mm)
-save.plot<- function(plot, filename, width, height) {
+save.plot <- function(plot, filename, width, height) {
   ggsave(plot, filename = paste0(filename, ".png"), dpi = 300, units = "mm", width = width, height = height)
   ggsave(plot, filename = paste0(filename, ".svg"), dpi = 300, units = "mm", width = width, height = height)
 }
