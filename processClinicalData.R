@@ -1,12 +1,8 @@
 # Read Manuel's clinical data
 
-library(tessera)
-library(tidyverse)
-library(parallel)
-library(patchwork)
-library(svglite)
 library(readxl)
 library(FSA)
+library(ggpubr)
 
 source("parameters.R")
 source("functions.R")
@@ -60,42 +56,86 @@ data <- readxl::read_xlsx(in.file,
     has.autosome = str_detect(mosaic_result, "[^pq]\\d+"),
     is.auto.and.sex = affects.sex.chr & has.autosome,
     seg_type = case_when(
-      (has.segmental | has.pq) & has.whole ~ "Segmental and whole",
-      has.segmental | has.pq ~ "Segmental",
+      (has.segmental | has.pq) & has.whole ~ "Whole chromosome", # match definition in Viotti 2021 -
+      has.segmental | has.pq ~ "Segmental only",
       has.whole | has.mono.tri ~ "Whole chromosome",
-      just.complex ~ "Unclear",
+      just.complex ~ "Whole chromosome", # match definition in Viotti 2021 -When mosaicism
+      # was present in more than two chromosomes, the mosaicism
+      # type was considered <U+2018><U+2018>complex,<U+2019><U+2019> including combinations of
+      # whole chromosomes and segmental regions.
       T ~ "Whole chromosome"
     ), # remainder that cannot be assigned segmental
     chr_type = case_when(
       is.autosomal.only ~ "Autosomal only",
       is.auto.and.sex ~ "Auto and sex chrs",
       T ~ "Sex chrs only"
-    )
-  ) %>%
-  dplyr::filter(seg_type != "Unclear")
-
-
+    ),
+    isOBP = generic_outcome == "Birth" | generic_outcome == "Ongoing Pregnancy" # ongoing pregnacy or birth
+  )
 
 ################################################################################
 
-# Implantation results
-
+# Implantation results grouped by segmental/whole chromosome
 imp.data <- data %>%
   dplyr::group_by(bin, seg_type) %>%
   dplyr::mutate(total_embryos = n()) %>%
   dplyr::group_by(bin, implantation_sac, seg_type) %>%
   dplyr::mutate(
     implanated_embryos = n(),
-    f_implanted_embryos = implanated_embryos / total_embryos
+    f_implanted_embryos = implanated_embryos / total_embryos,
+    p_implanted_embryos = f_implanted_embryos * 100
   ) %>%
-  dplyr::select(bin, seg_type, total_embryos, implanated_embryos, f_implanted_embryos) %>%
+  dplyr::select(bin, seg_type, total_embryos, implanated_embryos, p_implanted_embryos) %>%
   dplyr::distinct() %>%
-  dplyr::filter(implantation_sac == 1) %>%
-  dplyr::filter(seg_type != "Unclear")
+  dplyr::filter(implantation_sac == 1)
+
+# Birth outcomes, as for the implantation data
+birth.data <- data %>%
+  dplyr::group_by(bin, seg_type) %>%
+  dplyr::mutate(total_embryos = n()) %>%
+  dplyr::group_by(bin, isOBP, seg_type) %>%
+  dplyr::mutate(
+    n_outcomes = n(),
+    f_outcomes = n_outcomes / total_embryos,
+    p_outcomes = f_outcomes * 100
+  ) %>%
+  dplyr::select(bin, seg_type, total_embryos, n_outcomes, p_outcomes) %>%
+  dplyr::distinct() %>%
+  dplyr::filter(isOBP == T)
 
 
+# Implantation results combined
+imp.combined.data <- data %>%
+  dplyr::group_by(bin) %>%
+  dplyr::mutate(total_embryos = n()) %>%
+  dplyr::group_by(bin, implantation_sac) %>%
+  dplyr::mutate(
+    implanated_embryos = n(),
+    f_implanted_embryos = implanated_embryos / total_embryos,
+    p_implanted_embryos = f_implanted_embryos * 100
+  ) %>%
+  dplyr::select(bin, total_embryos, implanated_embryos, p_implanted_embryos) %>%
+  dplyr::distinct() %>%
+  dplyr::filter(implantation_sac == 1)
+
+birth.combined.data <- data %>%
+  dplyr::group_by(bin) %>%
+  dplyr::mutate(total_embryos = n()) %>%
+  dplyr::group_by(bin, isOBP) %>%
+  dplyr::mutate(
+    n_outcomes = n(),
+    f_outcomes = n_outcomes / total_embryos,
+    p_outcomes = f_outcomes * 100
+  ) %>%
+  dplyr::select(bin, total_embryos, n_outcomes, p_outcomes) %>%
+  dplyr::distinct() %>%
+  dplyr::filter(isOBP == T)
+
+################################################################################
 
 # Check aneuploidy and segmntal type in glm
+imp.glm <- glm(implantation_sac ~ level_aneuploidy + seg_type, family = "binomial", data = data)
+
 imp.glm <- glm(implantation_sac ~ level_aneuploidy + seg_type, family = binomial(link = "logit"), data = data)
 summary(imp.glm)
 # Is the model useful? Strong lack of support for the null hypothesis
@@ -106,72 +146,302 @@ deviance.diff <- imp.glm$null.deviance - imp.glm$deviance
 deviance.diff / imp.glm$null.deviance * 100
 # Very little of the variation (~1%) is explained by this model
 
-imp.plot <- ggplot(imp.data, aes(x = as.integer(bin), y = f_implanted_embryos)) +
-  geom_hline(yintercept = 0.5, size = 1) +
+
+################################################################################
+
+# make p-vals for the glm to display on each chart
+imp.whole.glm <- glm(p_implanted_embryos ~ as.integer(bin), data = imp.data %>% dplyr::filter(seg_type == "Whole chromosome"))
+imp.whole.pval <- round(coef(summary(imp.whole.glm))[2, 4], digits = 4)
+
+imp.seg.glm <- glm(p_implanted_embryos ~ as.integer(bin), data = imp.data %>% dplyr::filter(seg_type == "Segmental only"))
+imp.seg.pval <- round(coef(summary(imp.seg.glm))[2, 4], digits = 4)
+
+imp.all.glm <- glm(p_implanted_embryos ~ as.integer(bin), data = imp.data)
+imp.all.pval <- round(coef(summary(imp.all.glm))[2, 4], digits = 4)
+
+birth.whole.glm <- glm(p_outcomes ~ as.integer(bin), data = birth.data %>% dplyr::filter(seg_type == "Whole chromosome"))
+birth.whole.pval <- round(coef(summary(birth.whole.glm))[2, 4], digits = 4)
+
+birth.seg.glm <- glm(p_outcomes ~ as.integer(bin), data = birth.data %>% dplyr::filter(seg_type == "Segmental only"))
+birth.seg.pval <- round(coef(summary(birth.seg.glm))[2, 4], digits = 4)
+
+birth.all.glm <- glm(p_outcomes ~ as.integer(bin), data = birth.data)
+birth.all.pval <- round(coef(summary(birth.all.glm))[2, 4], digits = 4)
+
+
+################################################################################
+
+
+# Whole chromosome (and whole with segmental)
+whole.plot <- ggplot(
+  imp.data %>% dplyr::filter(seg_type == "Whole chromosome"),
+  aes(x = as.integer(bin), y = p_implanted_embryos)
+) +
+  geom_smooth(method = "glm", col = "black") +
+  geom_smooth(
+    data = birth.data %>% dplyr::filter(seg_type == "Whole chromosome"),
+    aes(x = as.integer(bin), y = p_outcomes),
+    method = "glm", col = "red", fill = "red"
+  ) +
   geom_point() +
-  # geom_line()+
-  geom_smooth(method = "lm") +
-  geom_text(aes(label = total_embryos, y = 0.05)) +
-  scale_y_continuous(limits = c(0, 1)) +
+  geom_point(
+    data = birth.data %>% dplyr::filter(seg_type == "Whole chromosome"),
+    aes(x = as.integer(bin), y = p_outcomes), col = "red"
+  ) +
+  annotate("text",
+    label = paste0("p=", imp.whole.pval, " (ns)"),
+    x = 4.4, y = 50, size = 2, colour = "black"
+  ) +
+  annotate("text",
+    label = paste0("p=", birth.whole.pval, " (ns)"),
+    x = 4.4, y = 20, size = 2, colour = "red"
+  ) +
+  geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
+  scale_y_continuous(limits = c(0, 100)) +
   scale_x_continuous(
     labels = function(x) levels(data$bin)[x],
     breaks = seq(0, 7, 1)
   ) +
-  labs(x = "Aneuploidy bin", y = "Fraction of embryos implanted") +
+  labs(x = "Mosaic level", y = "Positive outcome (%)", title = "Whole chromosome mosaics") +
   theme_bw() +
-  facet_grid(. ~ seg_type) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5),
+    plot.title = element_text(hjust = 0.5, size = 8)
+  )
 
-save.double.width(imp.plot, filename = "figure/Figure_9_implantation", height = 85)
+# Segmental only plot (no whole chromosome aneuploidies)
+seg.plot <- ggplot(
+  imp.data %>% dplyr::filter(seg_type == "Segmental only"),
+  aes(x = as.integer(bin), y = p_implanted_embryos)
+) +
+  geom_smooth(method = "glm", col = "black") +
+  geom_smooth(
+    data = birth.data %>% dplyr::filter(seg_type == "Segmental only"),
+    aes(x = as.integer(bin), y = p_outcomes),
+    method = "glm", col = "red", fill = "red"
+  ) +
+  geom_point() +
+  geom_point(data = birth.data %>% dplyr::filter(seg_type == "Segmental only"), aes(x = as.integer(bin), y = p_outcomes), col = "red") +
+  annotate("text",
+    label = paste0("p=", imp.seg.pval, " (ns)"),
+    x = 4.4, y = 60, size = 2, colour = "black"
+  ) +
+  annotate("text",
+    label = paste0("p=", birth.seg.pval, " (ns)"),
+    x = 4.4, y = 20, size = 2, colour = "red"
+  ) +
+  geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(
+    labels = function(x) levels(data$bin)[x],
+    breaks = seq(0, 7, 1)
+  ) +
+  labs(x = "Mosaic level", y = "Positive outcome (%)", title = "Segmental mosaics") +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5),
+    plot.title = element_text(hjust = 0.5, size = 8)
+  )
+
+# Both whole and segmental data combined
+combined.plot <- ggplot(imp.combined.data, aes(x = as.integer(bin), y = p_implanted_embryos)) +
+  geom_smooth(method = "glm", col = "black") +
+  geom_smooth(
+    data = birth.combined.data,
+    aes(x = as.integer(bin), y = p_outcomes),
+    method = "glm", col = "red", fill = "red"
+  ) +
+  geom_point(aes(col = "Implantation")) +
+  geom_point(data = birth.combined.data, aes(
+    x = as.integer(bin), y = p_outcomes,
+    col = "Ongoing Pregnancy / Birth"
+  )) +
+  annotate("text",
+    label = paste0("p=", imp.all.pval, " (ns)"),
+    x = 4.4, y = 50, size = 2, colour = "black"
+  ) +
+  annotate("text",
+    label = paste0("p=", birth.all.pval, " (ns)"),
+    x = 4.4, y = 20, size = 2, colour = "red"
+  ) +
+  geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_x_continuous(
+    labels = function(x) levels(data$bin)[x],
+    breaks = seq(0, 7, 1)
+  ) +
+  scale_color_manual(values = c("black", "red")) +
+  labs(x = "Mosaic level", y = "Positive outcome (%)", title = "All mosaics") +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5),
+    plot.title = element_text(hjust = 0.5, size = 8),
+    legend.title = element_blank(),
+    legend.position = c(0.5, 0.9),
+    legend.text = element_text(size = 8),
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    legend.key.size = unit(1.5, "mm")
+  )
+
+# Make panel figure
+fig <- combined.plot + whole.plot + seg.plot + plot_annotation(tag_levels = c("A"))
+save.double.width(fig, filename = "figure/Figure_9_implantation", height = 85)
 
 
+################################################################################
 
 
+# Make a logistic plot to show the full glm data
 
-# Birth outcomes, as for the implantation data
-birth.data <- data %>%
-  dplyr::group_by(bin, seg_type) %>%
+
+# Predict values using the model
+new.data <- expand.grid(
+  level_aneuploidy = seq(20, 80, 5),
+  seg_type = c("Whole chromosome", "Segmental only")
+)
+
+preds <- predict(imp.glm, newdata = new.data, type = "response", se = T)
+new.data$pred.full <- preds$fit
+new.data$ymin <- new.data$pred.full - 2 * preds$se.fit
+new.data$ymax <- new.data$pred.full + 2 * preds$se.fit
+
+# Plot the real data and add the predicted values & error
+
+glm.fig <- ggplot() +
+  geom_jitter(data = data, aes(x = level_aneuploidy, y = as.integer(implantation_sac) - 1), height = 0.1) +
+  geom_ribbon(data = new.data, aes(x = level_aneuploidy, y = pred.full, ymin = ymin, ymax = ymax), alpha = 0.25) +
+  geom_line(data = new.data, aes(x = level_aneuploidy, y = pred.full), color = "black", linewidth = 2) +
+  scale_y_continuous(limits = c(-0.1, 1.1), breaks = seq(0, 1, 0.2)) +
+  facet_wrap(~seg_type) +
+  labs(x = "Mosaic level (%)", y = "Implantation success") +
+  theme_bw()
+
+save.double.width(glm.fig, filename = "figure/Figure_9_implantation_glm", height = 85)
+
+
+################################################################################
+
+# Recreate Viotti et al Fig 2A row 2: split into two groups, aneuploidy <50 or >=50%
+# Compare rates of implantation or OP/B in each group
+
+
+imp.halves.data <- data %>%
+  dplyr::mutate(group = case_when(
+    level_aneuploidy < 50 ~ "<50%",
+    T ~ "<U+2265>50%"
+  )) %>%
+  dplyr::group_by(group, seg_type) %>%
   dplyr::mutate(total_embryos = n()) %>%
-  dplyr::group_by(bin, ongoing_birth, seg_type) %>%
+  dplyr::group_by(group, implantation_sac, seg_type) %>%
   dplyr::mutate(
-    n_outcomes = n(),
-    f_outcomes = n_outcomes / total_embryos
+    n_embryos = n(),
+    f_implanted_embryos = n_embryos / total_embryos,
+    p_outcome = f_implanted_embryos * 100
   ) %>%
-  dplyr::select(bin, seg_type, total_embryos, n_outcomes, f_outcomes) %>%
+  dplyr::select(group, seg_type, total_embryos, n_embryos, p_outcome) %>%
   dplyr::distinct() %>%
-  dplyr::filter(ongoing_birth == 1) %>%
-  dplyr::filter(seg_type != "Unclear")
+  dplyr::filter(implantation_sac == 1) %>%
+  dplyr::mutate(Type = "Implantation") %>%
+  dplyr::ungroup() %>%
+  dplyr::select(Type, group, seg_type, total_embryos, n_embryos, p_outcome) %>%
+  dplyr::mutate(x_embryo = total_embryos - n_embryos)
 
-# Check aneuploidy and segmntal type in glm
-birth.glm <- glm(ongoing_birth ~ level_aneuploidy + seg_type, family = binomial(link = "logit"), data = data)
-summary(birth.glm)
-# Is the model useful? Strong lack of support for the null hypothesis
-pchisq(birth.glm$null.deviance - birth.glm$deviance, birth.glm$df.null - birth.glm$df.residual, lower.tail = F)
+birth.halves.data <- data %>%
+  dplyr::mutate(group = case_when(
+    level_aneuploidy < 50 ~ "<50%",
+    T ~ "<U+2265>50%"
+  )) %>%
+  dplyr::group_by(group, seg_type) %>%
+  dplyr::mutate(total_embryos = n()) %>%
+  dplyr::group_by(group, isOBP, seg_type) %>%
+  dplyr::mutate(
+    n_embryos = n(),
+    f_implanted_embryos = n_embryos / total_embryos,
+    p_outcome = f_implanted_embryos * 100
+  ) %>%
+  dplyr::select(group, seg_type, total_embryos, n_embryos, p_outcome) %>%
+  dplyr::distinct() %>%
+  dplyr::filter(isOBP == T) %>%
+  dplyr::mutate(Type = "OP/B") %>%
+  dplyr::ungroup() %>%
+  dplyr::select(Type, group, seg_type, total_embryos, n_embryos, p_outcome) %>%
+  dplyr::mutate(x_embryo = total_embryos - n_embryos)
 
-# What does the model explain?
-deviance.diff <- birth.glm$null.deviance - birth.glm$deviance
-deviance.diff / birth.glm$null.deviance * 100
-# Very little of the variation (~1%) is explained by this model
+combined.halves.data <- rbind(imp.halves.data, birth.halves.data) %>%
+  dplyr::mutate(x_embryo = total_embryos - n_embryos)
 
-birth.plot <- ggplot(birth.data, aes(x = as.integer(bin), y = f_outcomes)) +
-  geom_hline(yintercept = 0.5, size = 1) +
-  geom_point() +
-  # geom_line()+
-  geom_smooth(method = "lm") +
-  geom_text(aes(label = total_embryos, y = 0.05)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_x_continuous(
-    labels = function(x) levels(data$bin)[x],
-    breaks = seq(0, 7, 1)
-  ) +
-  labs(x = "Aneuploidy bin", y = "Fraction of births") +
+# Test associations
+tests <- expand.grid(
+  seg_type = c("Whole chromosome", "Segmental only"),
+  Type = c("Implantation", "OP/B")
+)
+
+run.test <- function(s, t) {
+  filt <- combined.halves.data %>%
+    dplyr::filter(seg_type == s & Type == t) %>%
+    dplyr::select(n_embryos, x_embryo)
+  ch <- chisq.test(filt)
+  ch$p.value
+}
+
+tests$test.results <- mapply(run.test, tests$seg_type, tests$Type)
+tests$p.adj <- p.adjust(tests$test.results)
+
+
+pval.lines <- data.frame(
+  "seg_type" = c(
+    "Whole chromosome", "Whole chromosome", "Whole chromosome",
+    "Whole chromosome", "Whole chromosome", "Whole chromosome",
+    "Segmental only", "Segmental only", "Segmental only",
+    "Segmental only", "Segmental only", "Segmental only"
+  ),
+  "Type" = c(
+    "Implantation", "Implantation", "Implantation",
+    "OP/B", "OP/B", "OP/B",
+    "Implantation", "Implantation", "Implantation",
+    "OP/B", "OP/B", "OP/B"
+  ),
+  "xstart" = c(
+    1, 1, 2,
+    1, 1, 2,
+    1, 1, 2,
+    1, 1, 2
+  ),
+  "xend" = c(
+    1, 2, 2,
+    1, 2, 2,
+    1, 2, 2,
+    1, 2, 2
+  ),
+  "ystart" = c(
+    45, 55, 55,
+    36, 55, 55,
+    54, 55, 55,
+    45, 55, 55
+  ),
+  "yend" = c(
+    55, 55, 35,
+    55, 55, 23,
+    55, 55, 49,
+    55, 55, 39
+  )
+)
+
+halves.fig <- ggplot(combined.halves.data, aes(x = group, y = p_outcome)) +
+  geom_col() +
+  geom_segment(data = pval.lines, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
+  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2))) +
+  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2)))) +
+  geom_text(data = tests, aes(y = 58, x = 1.5, label = paste0("p=", round(p.adj, digits = 4)))) +
+  labs(y = "Positive outcome (%)") +
+  coord_cartesian(ylim = c(0, 60)) +
+  facet_wrap(seg_type ~ Type, nrow = 1) +
   theme_bw() +
-  facet_grid(. ~ seg_type) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
-
-save.double.width(birth.plot, filename = "figure/Figure_9_births", height = 85)
+  theme(axis.title.x = element_blank())
 
 
+save.double.width(halves.fig, filename = "figure/Figure_9_halves", height = 85)
 
 
 
@@ -181,13 +451,7 @@ save.double.width(birth.plot, filename = "figure/Figure_9_births", height = 85)
 
 
 
-
-
-
-
-
-
-
+################################################################################
 
 # Implantation by PGDIS classes
 
