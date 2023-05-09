@@ -87,7 +87,14 @@ imp.data <- data %>%
   ) %>%
   dplyr::select(bin, seg_type, total_embryos, implanated_embryos, p_implanted_embryos) %>%
   dplyr::distinct() %>%
-  dplyr::filter(implantation_sac == 1)
+  dplyr::filter(implantation_sac == 1) %>%
+  dplyr::mutate(bin_data = substr(bin, start = 2, stop = 6)) %>%
+  tidyr::separate(bin_data, c("bin_min", "bin_max"), sep = ",", convert = T) %>%
+  dplyr::mutate(label = paste0(
+    bin_min, "-", bin_max - 1,
+    "% n=",
+    total_embryos
+  ))
 
 # Birth outcomes, as for the implantation data
 birth.data <- data %>%
@@ -101,10 +108,21 @@ birth.data <- data %>%
   ) %>%
   dplyr::select(bin, seg_type, total_embryos, n_outcomes, p_outcomes) %>%
   dplyr::distinct() %>%
-  dplyr::filter(isOBP == T)
+  dplyr::filter(isOBP == T) %>%
+  rbind(., list(
+    "isOBP" = T, "bin" = factor("[70,80)"), "seg_type" = "Whole chromosome",
+    "total_embryos" = 23, "n_outcomes" = 0, "p_outcomes" = 0.000
+  )) %>%
+  dplyr::mutate(bin_data = substr(bin, start = 2, stop = 6)) %>%
+  tidyr::separate(bin_data, c("bin_min", "bin_max"), sep = ",", convert = T) %>%
+  dplyr::mutate(label = paste0(
+    bin_min, "-", bin_max - 1,
+    "% n=",
+    total_embryos
+  ))
 
 
-# Implantation results combined
+# Implantation results with whole and segmental combined
 imp.combined.data <- data %>%
   dplyr::group_by(bin) %>%
   dplyr::mutate(total_embryos = n()) %>%
@@ -116,7 +134,14 @@ imp.combined.data <- data %>%
   ) %>%
   dplyr::select(bin, total_embryos, implanated_embryos, p_implanted_embryos) %>%
   dplyr::distinct() %>%
-  dplyr::filter(implantation_sac == 1)
+  dplyr::filter(implantation_sac == 1) %>%
+  dplyr::mutate(bin_data = substr(bin, start = 2, stop = 6)) %>%
+  tidyr::separate(bin_data, c("bin_min", "bin_max"), sep = ",", convert = T) %>%
+  dplyr::mutate(label = paste0(
+    bin_min, "-", bin_max - 1,
+    "% n=",
+    total_embryos
+  ))
 
 birth.combined.data <- data %>%
   dplyr::group_by(bin) %>%
@@ -129,7 +154,14 @@ birth.combined.data <- data %>%
   ) %>%
   dplyr::select(bin, total_embryos, n_outcomes, p_outcomes) %>%
   dplyr::distinct() %>%
-  dplyr::filter(isOBP == T)
+  dplyr::filter(isOBP == T) %>%
+  dplyr::mutate(bin_data = substr(bin, start = 2, stop = 6)) %>% # Add labels for x-axis
+  tidyr::separate(bin_data, c("bin_min", "bin_max"), sep = ",", convert = T) %>%
+  dplyr::mutate(label = paste0(
+    bin_min, "-", bin_max - 1,
+    "% n=",
+    total_embryos
+  ))
 
 ################################################################################
 
@@ -171,6 +203,12 @@ birth.all.pval <- round(coef(summary(birth.all.glm))[2, 4], digits = 4)
 
 ################################################################################
 
+YMAX.PCT <- 70
+
+whole.xlabels <- imp.data %>%
+  dplyr::filter(seg_type == "Whole chromosome") %>%
+  dplyr::select(bin, label) %>%
+  dplyr::arrange(bin)
 
 # Whole chromosome (and whole with segmental)
 whole.plot <- ggplot(
@@ -194,20 +232,25 @@ whole.plot <- ggplot(
   ) +
   annotate("text",
     label = paste0("p=", birth.whole.pval, " (ns)"),
-    x = 4.4, y = 20, size = 2, colour = "red"
+    x = 3.4, y = 10, size = 2, colour = "red"
   ) +
-  geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
-  scale_y_continuous(limits = c(0, 100)) +
+  # geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
+  coord_cartesian(ylim = c(0, YMAX.PCT)) +
   scale_x_continuous(
-    labels = function(x) levels(data$bin)[x],
+    labels = function(x) str_wrap(whole.xlabels$label[x], width = 7),
     breaks = seq(0, 7, 1)
   ) +
   labs(x = "Mosaic level", y = "Positive outcome (%)", title = "Whole chromosome mosaics") +
   theme_bw() +
   theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 0.7, size = 5),
     plot.title = element_text(hjust = 0.5, size = 8)
   )
+
+seg.xlabels <- imp.data %>%
+  dplyr::filter(seg_type == "Segmental only") %>%
+  dplyr::select(bin, label) %>%
+  dplyr::arrange(bin)
 
 # Segmental only plot (no whole chromosome aneuploidies)
 seg.plot <- ggplot(
@@ -230,18 +273,23 @@ seg.plot <- ggplot(
     label = paste0("p=", birth.seg.pval, " (ns)"),
     x = 4.4, y = 20, size = 2, colour = "red"
   ) +
-  geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
-  scale_y_continuous(limits = c(0, 100)) +
+  # geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
+  coord_cartesian(ylim = c(0, YMAX.PCT)) +
   scale_x_continuous(
-    labels = function(x) levels(data$bin)[x],
+    labels = function(x) str_wrap(seg.xlabels$label[x], width = 7),
     breaks = seq(0, 7, 1)
   ) +
   labs(x = "Mosaic level", y = "Positive outcome (%)", title = "Segmental mosaics") +
   theme_bw() +
   theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 0.7, size = 5),
     plot.title = element_text(hjust = 0.5, size = 8)
   )
+
+
+combined.xlabels <- imp.combined.data %>%
+  dplyr::select(bin, label) %>%
+  dplyr::arrange(bin)
 
 # Both whole and segmental data combined
 combined.plot <- ggplot(imp.combined.data, aes(x = as.integer(bin), y = p_implanted_embryos)) +
@@ -262,19 +310,19 @@ combined.plot <- ggplot(imp.combined.data, aes(x = as.integer(bin), y = p_implan
   ) +
   annotate("text",
     label = paste0("p=", birth.all.pval, " (ns)"),
-    x = 4.4, y = 20, size = 2, colour = "red"
+    x = 4.4, y = 15, size = 2, colour = "red"
   ) +
-  geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
-  scale_y_continuous(limits = c(0, 100)) +
+  # geom_text(aes(label = total_embryos, y = 0.05), size = 2) +
+  coord_cartesian(ylim = c(0, YMAX.PCT)) +
   scale_x_continuous(
-    labels = function(x) levels(data$bin)[x],
+    labels = function(x) str_wrap(combined.xlabels$label[x], width = 7),
     breaks = seq(0, 7, 1)
   ) +
   scale_color_manual(values = c("black", "red")) +
   labs(x = "Mosaic level", y = "Positive outcome (%)", title = "All mosaics") +
   theme_bw() +
   theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 0.7, size = 5),
     plot.title = element_text(hjust = 0.5, size = 8),
     legend.title = element_blank(),
     legend.position = c(0.5, 0.9),
@@ -284,9 +332,6 @@ combined.plot <- ggplot(imp.combined.data, aes(x = as.integer(bin), y = p_implan
     legend.key.size = unit(1.5, "mm")
   )
 
-# Make panel figure
-fig <- combined.plot + whole.plot + seg.plot + plot_annotation(tag_levels = c("A"))
-save.double.width(fig, filename = "figure/Figure_9_implantation", height = 85)
 
 
 ################################################################################
@@ -329,7 +374,7 @@ save.double.width(glm.fig, filename = "figure/Figure_9_implantation_glm", height
 imp.halves.data <- data %>%
   dplyr::mutate(group = case_when(
     level_aneuploidy < 50 ~ "<50%",
-    T ~ "<U+2265>50%"
+    T ~ "\u226550%"
   )) %>%
   dplyr::group_by(group, seg_type) %>%
   dplyr::mutate(total_embryos = n()) %>%
@@ -350,7 +395,7 @@ imp.halves.data <- data %>%
 birth.halves.data <- data %>%
   dplyr::mutate(group = case_when(
     level_aneuploidy < 50 ~ "<50%",
-    T ~ "<U+2265>50%"
+    T ~ "\u226550%"
   )) %>%
   dplyr::group_by(group, seg_type) %>%
   dplyr::mutate(total_embryos = n()) %>%
@@ -369,7 +414,12 @@ birth.halves.data <- data %>%
   dplyr::mutate(x_embryo = total_embryos - n_embryos)
 
 combined.halves.data <- rbind(imp.halves.data, birth.halves.data) %>%
-  dplyr::mutate(x_embryo = total_embryos - n_embryos)
+  dplyr::mutate(x_embryo = total_embryos - n_embryos) %>%
+  dplyr::mutate(
+    seg_type = factor(seg_type, levels = c("Whole chromosome", "Segmental only")),
+    cgroup = paste0(Type, group)
+  )
+
 
 # Test associations
 tests <- expand.grid(
@@ -386,65 +436,189 @@ run.test <- function(s, t) {
 }
 
 tests$test.results <- mapply(run.test, tests$seg_type, tests$Type)
-tests$p.adj <- p.adjust(tests$test.results)
+tests$p.adj <- p.adjust(tests$test.results, method = "bonferroni")
+tests$x <- ifelse(tests$Type == "Implantation", 1.5, 3.5)
 
 
-pval.lines <- data.frame(
+# Make the plots
+# Plot for whole chromosomes only
+whole.halves.data <- combined.halves.data %>%
+  dplyr::filter(seg_type == "Whole chromosome")
+
+whole.lines.data <- data.frame(
   "seg_type" = c(
     "Whole chromosome", "Whole chromosome", "Whole chromosome",
-    "Whole chromosome", "Whole chromosome", "Whole chromosome",
-    "Segmental only", "Segmental only", "Segmental only",
-    "Segmental only", "Segmental only", "Segmental only"
+    "Whole chromosome", "Whole chromosome", "Whole chromosome"
   ),
   "Type" = c(
-    "Implantation", "Implantation", "Implantation",
-    "OP/B", "OP/B", "OP/B",
     "Implantation", "Implantation", "Implantation",
     "OP/B", "OP/B", "OP/B"
   ),
   "xstart" = c(
     1, 1, 2,
-    1, 1, 2,
-    1, 1, 2,
-    1, 1, 2
+    3, 3, 4
   ),
   "xend" = c(
     1, 2, 2,
-    1, 2, 2,
-    1, 2, 2,
-    1, 2, 2
+    3, 4, 4
   ),
   "ystart" = c(
-    45, 55, 55,
-    36, 55, 55,
+    44.25, 46.25, 46.25,
+    36, 40, 40
+  ),
+  "yend" = c(
+    46.25, 46.25, 34,
+    40, 40, 22
+  )
+)
+
+opb.colour <- "#ff6d6dff" # eyedropper from transparent region of upper panels, but with more saturation because there is full red in the upper panels
+
+whole.halves.fig <- ggplot(whole.halves.data, aes(x = cgroup, y = p_outcome)) +
+  geom_col(aes(fill = Type)) +
+  geom_segment(data = whole.lines.data, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
+  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = 2) +
+  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = 2) +
+  geom_text(
+    data = tests[tests$seg_type == "Whole chromosome", ], aes(y = 53, x = x, label = paste0("p=", round(p.adj, digits = 4))),
+    size = 2
+  ) +
+  labs(y = "Positive outcome (%)", title = "Whole chromosome mosaics") +
+  scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
+  coord_cartesian(ylim = c(0, YMAX.PCT)) +
+  scale_fill_manual(values = c("grey", opb.colour)) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 8),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(size = 8),
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    legend.key.size = unit(1.5, "mm")
+  )
+
+
+seg.halves.data <- combined.halves.data %>%
+  dplyr::filter(seg_type == "Segmental only")
+
+seg.lines.data <- data.frame(
+  "seg_type" = c(
+    "Segmental only", "Segmental only", "Segmental only",
+    "Segmental only", "Segmental only", "Segmental only"
+  ),
+  "Type" = c(
+    "Implantation", "Implantation", "Implantation",
+    "OP/B", "OP/B", "OP/B"
+  ),
+  "xstart" = c(
+    1, 1, 2,
+    3, 3, 4
+  ),
+  "xend" = c(
+    1, 2, 2,
+    3, 4, 4
+  ),
+  "ystart" = c(
     54, 55, 55,
     45, 55, 55
   ),
   "yend" = c(
-    55, 55, 35,
-    55, 55, 23,
     55, 55, 49,
     55, 55, 39
   )
 )
 
-halves.fig <- ggplot(combined.halves.data, aes(x = group, y = p_outcome)) +
-  geom_col() +
-  geom_segment(data = pval.lines, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
-  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2))) +
-  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2)))) +
-  geom_text(data = tests, aes(y = 58, x = 1.5, label = paste0("p=", round(p.adj, digits = 4)))) +
-  labs(y = "Positive outcome (%)") +
-  coord_cartesian(ylim = c(0, 60)) +
-  facet_wrap(seg_type ~ Type, nrow = 1) +
+# Segmental only, 50/50 split figure
+seg.halves.fig <- ggplot(seg.halves.data, aes(x = cgroup, y = p_outcome)) +
+  geom_col(aes(fill = Type)) +
+  geom_segment(data = seg.lines.data, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
+  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = 2) +
+  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = 2) +
+  geom_text(
+    data = tests[tests$seg_type == "Segmental only", ], aes(y = 58, x = x, label = paste0("p=", round(p.adj, digits = 4))),
+    size = 2
+  ) +
+  labs(y = "Positive outcome (%)", title = "Segmental mosaics") +
+  scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
+  coord_cartesian(ylim = c(0, YMAX.PCT)) +
+  scale_fill_manual(values = c("grey", opb.colour)) +
   theme_bw() +
-  theme(axis.title.x = element_blank())
+  theme(
+    axis.title.x = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 8),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(size = 8),
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    legend.key.size = unit(1.5, "mm")
+  )
+
+both.halves.data <- combined.halves.data %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(Type, group) %>%
+  summarise(
+    total_embryos = sum(total_embryos),
+    n_embryos = sum(n_embryos),
+    p_outcome = n_embryos / total_embryos * 100,
+    cgroup = paste0(Type, group)
+  ) %>%
+  dplyr::distinct()
 
 
-save.double.width(halves.fig, filename = "figure/Figure_9_halves", height = 85)
+both.lines.data <- data.frame(
+  "Type" = c(
+    "Implantation", "Implantation", "Implantation",
+    "OP/B", "OP/B", "OP/B"
+  ),
+  "xstart" = c(
+    1, 1, 2,
+    3, 3, 4
+  ),
+  "xend" = c(
+    1, 2, 2,
+    3, 4, 4
+  ),
+  "ystart" = c(
+    50, 52, 52,
+    40, 42, 42
+  ),
+  "yend" = c(
+    52, 52, 42,
+    42, 42, 30
+  )
+)
+
+both.halves.fig <- ggplot(both.halves.data, aes(x = cgroup, y = p_outcome)) +
+  geom_col(aes(fill = Type)) +
+  geom_segment(data = both.lines.data, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
+  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = 2) +
+  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = 2) +
+  geom_text(
+    data = tests, aes(y = 58, x = 1.5, label = paste0("p=", round(p.adj, digits = 4))),
+    size = 2
+  ) +
+  labs(y = "Positive outcome (%)", title = "All mosaics") +
+  scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
+  coord_cartesian(ylim = c(0, YMAX.PCT)) +
+  scale_fill_manual(values = c("grey", opb.colour)) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 8),
+    legend.title = element_blank(),
+    legend.position = "none",
+    legend.text = element_text(size = 8),
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    legend.key.size = unit(1.5, "mm")
+  )
 
 
-
+fig9.full <- (combined.plot + whole.plot + seg.plot) / (both.halves.fig + whole.halves.fig + seg.halves.fig) + plot_annotation(tag_levels = c("A"))
+save.double.width(fig9.full, filename = "figure/Figure_9_full", height = 140)
 
 
 
