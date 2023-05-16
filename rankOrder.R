@@ -145,7 +145,7 @@ if (!file.exists(out.file)) {
 #     yields a percent correctly selected for the pool
 # show the distribution of correct percents per dispersal
 out.file.pool <- "data/Rank_pool_results.csv"
-if (!file.exists(out.file)) {
+if (!file.exists(out.file.pool)) {
   POOL.SIZES <- seq(4, 10, 2) # number of embryos in the pool
   replicates <- 100 # number of pools to make for each dispersal
 
@@ -185,15 +185,15 @@ if (!file.exists(out.file)) {
       biopsies <- mapply(get.biopsy, a = aneuploidies, s = seeds)
 
       # Rank the embryos by aneuploidy
-      is.real.best = aneuploidies %in% sort(aneuploidies)[1:best.size]
-      is.biop.best = biopsies %in% sort(biopsies)[1:best.size]
-      
+      is.real.best <- aneuploidies %in% sort(aneuploidies)[1:best.size]
+      is.biop.best <- biopsies %in% sort(biopsies)[1:best.size]
+
       # best.from.biopsy <- which(biopsies %in% sort(biopsies)[1:best.size])
       # best.from.reality <- which(aneuploidies %in% sort(aneuploidies)[1:best.size])
 
       # There may be ties in ranks; in this case, increase the number of transferred embryos
-      is.transferrable = sum(is.biop.best)
-      pct.correct = sum(is.real.best&is.biop.best) / is.transferrable * 100
+      is.transferrable <- sum(is.biop.best)
+      pct.correct <- sum(is.real.best & is.biop.best) / is.transferrable * 100
 
       # Calculate the percent of embryos correctly selected for transfer by biopsy
       # pct.correct <- sum(best.from.biopsy %in% best.from.reality) / best.size * 100
