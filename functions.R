@@ -6,7 +6,7 @@ library(data.table)
 library(parallel)
 library(patchwork)
 
-# Return the PGDIS class for a given fractional aneuploidy
+# Return the embryo class for a given fractional aneuploidy
 to.pgdis.class <- function(f.aneuploidy) {
   case_when(
     f.aneuploidy < 0.20 ~ "Euploid",
@@ -15,6 +15,17 @@ to.pgdis.class <- function(f.aneuploidy) {
     f.aneuploidy <= 1 ~ "Aneuploid"
   )
 }
+
+# Return the equal split class for a given fractional aneuploidy
+to.equal.class <- function(f.aneuploidy) {
+  case_when(
+    f.aneuploidy < 0.20 ~ "Euploid",
+    f.aneuploidy < 0.50 ~ "Low level",
+    f.aneuploidy <= 0.80 ~ "High level",
+    f.aneuploidy <= 1 ~ "Aneuploid"
+  )
+}
+
 
 # Return the merged class for a given fractional aneuploidy
 to.merged.class <- function(f.aneuploidy) {

@@ -8,7 +8,7 @@ source("parameters.R")
 source("functions.R")
 
 # Given raw input data, calculate the accuracy of the biopsies
-# with respect to PGDIS classification boundaries
+# with respect to embryo classification boundaries
 calc.pgdis.accuracy <- function(data) {
   data %>%
     rowwise() %>%
@@ -19,15 +19,19 @@ calc.pgdis.accuracy <- function(data) {
     select(-starts_with("V")) %>%
     mutate(
       pgdis_class = list(to.pgdis.class(f_aneuploid)),
+      equal_class = list(to.equal.class(f_aneuploid)),
       merge_class = list(to.merged.class(f_aneuploid)),
       actual_pgdis_class = to.pgdis.class(Aneuploidy),
+      actual_equal_class = to.equal.class(Aneuploidy),
       actual_merge_class = to.merged.class(Aneuploidy),
       n_pgdis_match = sum(pgdis_class == actual_pgdis_class),
       f_pgdis_match = n_pgdis_match / 200,
+      n_equal_match = sum(equal_class == actual_equal_class),
+      f_equal_match = n_equal_match / 200,
       n_merge_match = sum(merge_class == actual_merge_class),
       f_merge_match = n_merge_match / 200
     ) %>%
-    select(-n_aneuploid, -f_aneuploid, -pgdis_class, -merge_class) %>%
+    select(-n_aneuploid, -f_aneuploid, -pgdis_class, -merge_class, -equal_class) %>%
     ungroup()
 }
 
@@ -41,13 +45,18 @@ calc.biopsy.accuracy <- function(data) {
     tidyr::unnest(n_aneuploid) %>%
     dplyr::mutate(
       embryo_pgdis_class = to.pgdis.class(Aneuploidy),
+      embryo_equal_class = to.equal.class(Aneuploidy),
       embryo_merge_class = to.merged.class(Aneuploidy),
       biopsy_pgdis_class = to.pgdis.class(n_aneuploid / Biopsy_size),
+      biopsy_equal_class = to.equal.class(n_aneuploid / Biopsy_size),
       biopsy_merge_class = to.merged.class(n_aneuploid / Biopsy_size)
     ) %>%
     dplyr::ungroup() %>% # cancels rowwise
     dplyr::group_by(Aneuploidy, Dispersal, n_aneuploid, embryo_pgdis_class, biopsy_pgdis_class, Biopsy_size) %>%
     dplyr::mutate(n_biopsies_pgdis = dplyr::n()) %>%
+    dplyr::ungroup() %>% # cancels rowwise
+    dplyr::group_by(Aneuploidy, Dispersal, n_aneuploid, embryo_equal_class, biopsy_equal_class, Biopsy_size) %>%
+    dplyr::mutate(n_biopsies_equal = dplyr::n()) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(Aneuploidy, Dispersal, n_aneuploid, embryo_merge_class, biopsy_merge_class, Biopsy_size) %>%
     dplyr::mutate(n_biopsies_merge = dplyr::n()) %>%
