@@ -75,7 +75,7 @@ out.combined.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
     axis.line.y = element_line(),
     panel.grid.major.y = element_line(),
     legend.position = c(0.9, 0.83),
-    legend.key = element_rect(fill="transparent"),
+    legend.key = element_rect(fill = "transparent"),
     legend.background = element_blank()
   )
 save.double.width(out.combined.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S5_ranks_split"), 170)
@@ -126,8 +126,7 @@ out.split.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
     axis.line.y = element_line(),
     panel.grid.major.y = element_line(),
     legend.position = c(0.9, 0.85),
-    legend.key = element_rect(fill="transparent"),
+    legend.key = element_rect(fill = "transparent"),
     legend.background = element_blank()
   )
 save.double.width(out.split.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S6_ranks_combined"), 170)
-

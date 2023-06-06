@@ -10,6 +10,7 @@ source("functions.R")
 in.file <- "data/Mosaic Embryo Transfers Sent.xlsx"
 
 # Read the spreadsheet and clean the data
+# Assign the embryos to appropriate categories
 data <- readxl::read_xlsx(in.file,
   sheet = "Sheet2", range = "A2:N1734",
   col_names = c(
