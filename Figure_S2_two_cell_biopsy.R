@@ -15,9 +15,9 @@ in.files <- list.files(
 )
 
 in.data <- do.call(rbind, mclapply(in.files,
-  fread,
-  header = T,
-  mc.cores = N.CORES
+                                   fread,
+                                   header = T,
+                                   mc.cores = N.CORES
 ))
 
 in.data <- in.data %>%
@@ -47,7 +47,8 @@ make.two.biopsy.heatmap <- function(data, zero.data) {
       sec.axis = sec_axis(~., name = "Dispersal of aneuploid cells", breaks = NULL, labels = NULL)
     ) +
     facet_grid(Embryo_size ~ Dispersal) +
-    theme_classic()
+    theme_bw()+
+    theme(panel.grid = element_blank())
 }
 
 # plot - the heat map
@@ -127,53 +128,55 @@ make.two.biopsy.column.plot <- function(data, biopsy.size) {
       x = "Biopsy aneuploidy"
     ) +
     facet_grid(Embryo_size ~ Dispersal) +
-    theme_classic() +
+    theme_bw() +
     theme(legend.position = "none")
 }
 
-for (b in BIOPSY.SIZES) {
-  filt.data <- in.data %>%
-    dplyr::filter(Biopsy_size == b)
 
-  # Blank canvas
-  zero.data <- expand.grid(
-    Aneuploidy = ANEUPLOIDY.RANGE,
-    f_aneuploid = seq(0, 100, 100 / (b * 2)),
-    PctTotal = 0
-  )
+# for (b in BIOPSY.SIZES) {
+b <- 5
+filt.data <- in.data %>%
+  dplyr::filter(Biopsy_size == b)
 
-  # Plot with PGDIS classes
-  hmap.plot.pgdis <- make.two.biopsy.heatmap(filt.data, zero.data)
-  hmap.plot.pgdis <- draw.biopsy.pgdis.classes(hmap.plot.pgdis, b)
+# Blank canvas
+zero.data <- expand.grid(
+  Aneuploidy = ANEUPLOIDY.RANGE,
+  f_aneuploid = seq(0, 100, 100 / (b * 2)),
+  PctTotal = 0
+)
 
-  save.double.width(hmap.plot.pgdis,
-    filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_heatmap_two_biopsy_pgdis_", b),
-    height = 150
-  )
+# Plot with PGDIS classes
+hmap.plot.pgdis <- make.two.biopsy.heatmap(filt.data, zero.data)
+hmap.plot.pgdis <- draw.biopsy.pgdis.classes(hmap.plot.pgdis, b)
 
-  # Plot with merge classes
-  hmap.plot.merge <- make.two.biopsy.heatmap(filt.data, zero.data)
-  hmap.plot.merge <- draw.biopsy.merge.classes(hmap.plot.merge, b)
+save.double.width(hmap.plot.pgdis,
+                  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_predictive_heatmap_two_biopsy_", b),
+                  height = 150
+)
 
-  save.double.width(hmap.plot.merge,
-    filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_heatmap_two_biopsy_merge_", b),
-    height = 150
-  )
+# Plot with merge classes
+hmap.plot.merge <- make.two.biopsy.heatmap(filt.data, zero.data)
+hmap.plot.merge <- draw.biopsy.merge.classes(hmap.plot.merge, b)
 
-  # Make columns
-  col.data.pgdis <- calc.column.data(filt.data, to.pgdis.class)
-  col.plot.pgdis <- make.two.biopsy.column.plot(col.data.pgdis, b)
+save.double.width(hmap.plot.merge,
+                  filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_heatmap_two_biopsy_merge_", b),
+                  height = 150
+)
 
-  save.double.width(col.plot.pgdis,
-    filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_columns_two_biopsy_pgdis_", b),
-    height = 150
-  )
+# Make columns
+col.data.pgdis <- calc.column.data(filt.data, to.pgdis.class)
+col.plot.pgdis <- make.two.biopsy.column.plot(col.data.pgdis, b)
 
-  col.data.merge <- calc.column.data(filt.data, to.merged.class)
-  col.plot.merge <- make.two.biopsy.column.plot(col.data.merge, b)
+save.double.width(col.plot.pgdis,
+                  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_predictive_columns_two_biopsy_", b),
+                  height = 150
+)
 
-  save.double.width(col.plot.merge,
-    filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_columns_two_biopsy_merge_", b),
-    height = 150
-  )
-}
+col.data.merge <- calc.column.data(filt.data, to.merged.class)
+col.plot.merge <- make.two.biopsy.column.plot(col.data.merge, b)
+
+save.double.width(col.plot.merge,
+                  filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_columns_two_biopsy_merge_", b),
+                  height = 150
+)
+

@@ -41,8 +41,10 @@ p <- ggplot(biopsy.aggregate, aes(x = Aneuploidy * 100, y = Dispersal, fill = pc
   geom_raster() +
   labs(fill = "Percent of\nbiopsies", x = "Embryo aneuploidy (%)", y = "Embryo dispersal") +
   scale_fill_viridis_c() +
-  facet_wrap(~n_aneuploid) +
-  theme_classic()
+  facet_wrap(~n_aneuploid, ncol = 3, labeller =  as_labeller(function(i) paste(i,"cells"))) +
+  theme_bw()+
+  theme(axis.title = element_text(size = 9),
+        panel.grid = element_blank())
 
 # Make the full panel figure
 save.double.width(p, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_5_origins"), height = 120)
@@ -57,6 +59,8 @@ p1 <- ggplot(one.cell.data, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_
   geom_raster() +
   labs(fill = "Percent of\nbiopsies", x = "Embryo aneuploidy (%)", y = "Embryo dispersal") +
   scale_fill_viridis_c() +
-  theme_classic()
+  theme_bw()+
+  theme(axis.title = element_text(size = 9),
+        panel.grid = element_blank())
 
 save.plot(p1, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_xxxx_single_aneuploid_origins"), width = 100, height = 80)

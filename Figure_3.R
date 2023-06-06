@@ -42,7 +42,7 @@ p <- ggplot(plot.values, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_pgd
   coord_cartesian(ylim = c(0, 1.05)) +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   scale_fill_viridis_c(limits = c(0, 100)) +
-  theme_classic() +
+  theme_bw() +
   theme(
     legend.position = "top",
     legend.title = element_text(size = 9),
@@ -50,7 +50,8 @@ p <- ggplot(plot.values, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_pgd
     legend.box.spacing = unit(1.5, "mm"),
     legend.key.height = unit(3, "mm"),
     legend.title.align = 1,
-    axis.title = element_text(size = 9)
+    axis.title = element_text(size = 9),
+    panel.grid = element_blank()
   )
 
 save.single.width(p, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_3_heatmap"), height = 85)
