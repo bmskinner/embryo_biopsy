@@ -38,9 +38,11 @@ p <- ggplot(plot.values, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_pgd
   coord_cartesian(ylim = c(0, 1.05)) +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   scale_fill_viridis_c(limits = c(0, 100)) +
-  facet_wrap(~Biopsy_size, ncol = 4, labeller =  as_labeller(function(i) paste(i,"cells"))) +
+  facet_wrap(~Biopsy_size, ncol = 4, labeller = as_labeller(function(i) paste(i, "cells"))) +
   theme_bw() +
-  theme(axis.title = element_text(size = 9),
-        panel.grid = element_blank())
+  theme(
+    axis.title = element_text(size = 9),
+    panel.grid = element_blank()
+  )
 
 save.double.width(p, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_4_heatmap"), height = 120)
