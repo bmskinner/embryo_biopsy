@@ -39,7 +39,8 @@ calc.better.worse <- function(data) {
       f_type = n_type / total
     ) %>%
     dplyr::ungroup() %>%
-    dplyr::select(-n_aneuploid, -f_aneuploid, -Seed)
+    dplyr::select(-n_aneuploid, -f_aneuploid, -Seed) %>%
+    dplyr::distinct()
 }
 
 # Calculate aggregate data from raw values for making heatmaps
@@ -69,7 +70,8 @@ agg.values <- do.call(rbind, mclapply(list.files(
 ),
 fread,
 header = T, mc.cores = N.CORES
-))
+)) %>%
+  dplyr::distinct()
 
 p <- ggplot(agg.values[agg.values$Embryo_size == 200, ], aes(x = Aneuploidy, y = Dispersal, fill = f_type)) +
   geom_tile() +
