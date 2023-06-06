@@ -76,7 +76,9 @@ plot.heatmap <- function(data, zero.data) {
     scale_x_continuous(breaks = seq(0, 100, 20)) +
     theme_classic() +
     facet_wrap(~Dispersal, ncol = 3) +
+    theme_bw() +
     theme(
+      panel.grid = element_blank(),
       legend.position = "top",
       legend.title = element_text(size = 9),
       legend.text = element_text(size = 9),
@@ -139,7 +141,7 @@ plot.columns <- function(data) {
       x = "Biopsy aneuploidy (%)"
     ) +
     facet_wrap(~Dispersal, ncol = 3) +
-    theme_classic() +
+    theme_bw() +
     theme(
       legend.position = "none",
       axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)

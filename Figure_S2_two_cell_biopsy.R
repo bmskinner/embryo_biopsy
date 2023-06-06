@@ -168,7 +168,7 @@ col.data.pgdis <- calc.column.data(filt.data, to.pgdis.class)
 col.plot.pgdis <- make.two.biopsy.column.plot(col.data.pgdis, b)
 
 save.double.width(col.plot.pgdis,
-  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_predictive_columns_two_biopsy_", b),
+  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S3_predictive_columns_two_biopsy_", b),
   height = 150
 )
 
