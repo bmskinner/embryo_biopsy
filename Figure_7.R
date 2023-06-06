@@ -70,11 +70,12 @@ fig7A.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
     x = "Aneuploidy difference (%)", y = "Percent embryos with rank order...",
     color = "Z", shape = "Z"
   ) +
-  theme_classic() +
+  theme_bw() +
   theme(
     axis.line.y = element_line(),
     panel.grid.major.y = element_line(),
     legend.position = c(0.8, 0.47),
+    legend.key = element_rect(fill = "transparent"),
     legend.background = element_blank()
   )
 
@@ -116,11 +117,12 @@ fig7B.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
     x = "Aneuploidy difference (%)", y = "Effective percent embryos\nwith rank order...",
     color = "Z", shape = "Z"
   ) +
-  theme_classic() +
+  theme_bw() +
   theme(
     axis.line.y = element_line(),
     panel.grid.major.y = element_line(),
     legend.position = c(0.8, 0.52),
+    legend.key = element_rect(fill = "transparent"),
     legend.background = element_blank()
   )
 
