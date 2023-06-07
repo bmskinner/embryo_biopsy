@@ -79,3 +79,48 @@ p <- ggplot(agg.values[agg.values$Embryo_size == 200, ], aes(x = Aneuploidy, y =
 
 
 save.double.width(p, filename = paste0(FIGURE.OUTPUT.DIR, "/Better_or_worse_heatmap"), height = 170)
+
+
+p <- ggplot(agg.values[agg.values$Embryo_size == 200 & Biopsy_size == 5 & type == "Better", ], aes(x = Aneuploidy * 100, y = Dispersal, fill = f_type * 100)) +
+  geom_raster() +
+  scale_fill_viridis_c(limits = c(0, 100)) +
+  scale_x_continuous(breaks = seq(0, 100, 20)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  labs(x = "Aneuploidy", fill = "Percent of biopsies suggesting\nembryo is 'better' than reality", title = "  \n  ") +
+  theme_bw() +
+  theme(
+    legend.position = c(-0.25, 1.2),
+    legend.justification = "left",
+    legend.direction = "horizontal",
+    legend.title = element_text(size = 9),
+    legend.text = element_text(size = 9),
+    legend.box.spacing = unit(1.5, "mm"),
+    legend.key.height = unit(3, "mm"),
+    # legend.title.align = 1,
+    axis.title = element_text(size = 9),
+    panel.grid = element_blank()
+  )
+
+# count the aneuploidy levels in which >50% biopsies are better at low and high dispersal
+filt <- agg.values %>%
+  dplyr::filter(
+    Embryo_size == 200,
+    Biopsy_size == 5,
+    type == "Better",
+    Dispersal == 0 | Dispersal == 1
+  ) %>%
+  dplyr::mutate(is.better = f_type > 0.5)
+
+
+p2 <- ggplot(filt, aes(x = Aneuploidy * 100, y = f_type * 100)) +
+  geom_hline(yintercept = 50, linewidth = 1) +
+  geom_col(width = 1.1) +
+  scale_x_continuous(breaks = seq(0, 100, 20)) +
+  scale_y_continuous(breaks = seq(0, 100, 20)) +
+  labs(x = "Aneuploidy", y = "Percent of biopsies suggesting\nembryo is 'better' than reality") +
+  facet_wrap(~Dispersal, ncol = 1, labeller = as_labeller(function(x) paste(x, "dispersal"))) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 9))
+
+p3 <- p + p2 + plot_annotation(tag_levels = c("A"))
+save.double.width(p3, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S9_better_or_worse_heatmap"), height = 85)
