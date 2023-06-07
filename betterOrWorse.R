@@ -51,7 +51,6 @@ make.aggregate.values <- function(e, a, d) {
   if (!file.exists(part.file) & file.exists(in.file)) {
     in.data <- fread(file = in.file, header = T)
     filt.tf <- calc.better.worse(in.data)
-    print(head(filt.tf))
     write.csv(filt.tf, file = part.file, quote = F, row.names = F)
     rm(filt.tf)
   }
