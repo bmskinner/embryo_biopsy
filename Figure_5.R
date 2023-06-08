@@ -9,6 +9,7 @@ library(parallel)
 source("parameters.R")
 source("functions.R")
 
+# Read the data
 biopsy.values <- do.call(rbind, mclapply(list.files(
   path = AGGREGATE.DATA.PATH,
   pattern = "biopsy", full.names = T
@@ -36,19 +37,20 @@ zero.data <- expand.grid(
   pct_biopsies = 0
 )
 
+# Create the heatmap for all biopsy sizes
 p <- ggplot(biopsy.aggregate, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_biopsies)) +
   geom_raster(data = zero.data) +
   geom_raster() +
   labs(fill = "Percent of\nbiopsies", x = "Embryo aneuploidy (%)", y = "Embryo dispersal") +
   scale_fill_viridis_c() +
-  facet_wrap(~n_aneuploid, ncol = 3, labeller = as_labeller(function(i) paste(i, "cells"))) +
+  facet_wrap(~n_aneuploid, ncol = 3, labeller = as_labeller(function(i) ifelse(i == 1, "1 cell", paste(i, "cells")))) +
   theme_bw() +
   theme(
     axis.title = element_text(size = 9),
     panel.grid = element_blank()
   )
 
-# Make the full panel figure
+# Save the full panel figure
 save.double.width(p, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_5_origins"), height = 120)
 
 # Make a figure with just the 1 aneuploid cell data
