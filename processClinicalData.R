@@ -208,7 +208,7 @@ whole.plot <- ggplot(
     aes(x = as.integer(bin), y = p_outcomes),
     method = "glm", col = "red", fill = "red"
   ) +
-  geom_point() +
+  geom_point(shape = 17) +
   geom_point(
     data = birth.data %>% dplyr::filter(seg_type == "Whole chromosome"),
     aes(x = as.integer(bin), y = p_outcomes), col = "red"
@@ -250,7 +250,7 @@ seg.plot <- ggplot(
     aes(x = as.integer(bin), y = p_outcomes),
     method = "glm", col = "red", fill = "red"
   ) +
-  geom_point() +
+  geom_point(shape = 17) +
   geom_point(data = birth.data %>% dplyr::filter(seg_type == "Segmental only"), aes(x = as.integer(bin), y = p_outcomes), col = "red") +
   annotate("text",
     label = paste0("p=", imp.seg.pval, " (ns)"),
@@ -286,10 +286,11 @@ combined.plot <- ggplot(imp.combined.data, aes(x = as.integer(bin), y = p_implan
     aes(x = as.integer(bin), y = p_outcomes),
     method = "glm", col = "red", fill = "red"
   ) +
-  geom_point(aes(col = "Implantation")) +
+  geom_point(aes(col = "Implantation", shape = "Implantation")) +
   geom_point(data = birth.combined.data, aes(
     x = as.integer(bin), y = p_outcomes,
-    col = "Ongoing Pregnancy / Birth"
+    col = "Ongoing Pregnancy / Birth",
+    shape = "Ongoing Pregnancy / Birth"
   )) +
   annotate("text",
     label = paste0("p=", imp.all.pval, " (ns)"),
@@ -305,7 +306,16 @@ combined.plot <- ggplot(imp.combined.data, aes(x = as.integer(bin), y = p_implan
     labels = function(x) str_wrap(combined.xlabels$label[x], width = 7),
     breaks = seq(0, 7, 1)
   ) +
-  scale_color_manual(values = c("black", "red")) +
+  scale_shape_manual(
+    name = "State",
+    labels = c("Implantation", "Ongoing Pregnancy / Birth"),
+    values = c("Ongoing Pregnancy / Birth" = 16, "Implantation" = 17)
+  ) +
+  scale_color_manual(
+    name = "State",
+    labels = c("Implantation", "Ongoing Pregnancy / Birth"),
+    values = c("Ongoing Pregnancy / Birth" = "red", "Implantation" = "black")
+  ) +
   labs(x = "Mosaic level", y = "Positive outcome (%)", title = "All mosaics") +
   theme_bw() +
   theme(
