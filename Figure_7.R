@@ -36,13 +36,6 @@ fig7A.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
     ymax = Mean.correct + SD.correct,
     fill = "Correct"
   ), alpha = 0.5, col = NA) +
-  geom_point(aes(y = Mean.incorrect, col = "Incorrect", shape = "Incorrect"), size = 0.5) +
-  geom_line(aes(y = Mean.incorrect, col = "Incorrect")) +
-  geom_ribbon(aes(
-    ymin = Mean.incorrect - SD.incorrect,
-    ymax = Mean.incorrect + SD.incorrect,
-    fill = "Incorrect"
-  ), alpha = 0.5, col = NA) +
   geom_point(aes(y = Mean.no.rank, col = "Tied", shape = "Tied"), size = 0.5) +
   geom_line(aes(y = Mean.no.rank, col = "Tied")) +
   geom_ribbon(aes(
@@ -50,24 +43,34 @@ fig7A.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
     ymax = Mean.no.rank + SD.no.rank,
     fill = "Tied"
   ), alpha = 0.5, col = NA) +
+  geom_point(aes(y = Mean.incorrect, col = "Incorrect", shape = "Incorrect"), size = 0.5) +
+  geom_line(aes(y = Mean.incorrect, col = "Incorrect")) +
+  geom_ribbon(aes(
+    ymin = Mean.incorrect - SD.incorrect,
+    ymax = Mean.incorrect + SD.incorrect,
+    fill = "Incorrect"
+  ), alpha = 0.5, col = NA) +
   scale_y_continuous(
     limits = c(0, 100), breaks = seq(0, 100, 20),
   ) +
   scale_colour_manual(
     name = element_blank(),
+    breaks = c("Correct", "Tied", "Incorrect"),
     values = c(Correct = "blue", Tied = "black", Incorrect = "red")
   ) +
   scale_fill_manual(
     name = element_blank(),
     values = c(Correct = "blue", Tied = "black", Incorrect = "red"),
+    breaks = c("Correct", "Tied", "Incorrect"),
     guide = "none"
   ) +
   scale_shape_manual(
     name = element_blank(),
+    breaks = c("Correct", "Tied", "Incorrect"),
     values = c(Correct = 16, Tied = 15, Incorrect = 17)
   ) +
   labs(
-    x = "Aneuploidy difference (%)", y = "Percent embryos with rank order...",
+    x = "Aneuploidy difference (%)", y = "Percent of embryos",
     color = "Z", shape = "Z"
   ) +
   theme_bw() +
@@ -114,7 +117,7 @@ fig7B.plot <- ggplot(filt[filt$Low.disp == 0 & filt$High.disp == 0, ], aes(x = A
     values = c(Correct = 16, Incorrect = 17)
   ) +
   labs(
-    x = "Aneuploidy difference (%)", y = "Effective percent embryos\nwith rank order...",
+    x = "Aneuploidy difference (%)", y = "Effective percent of embryos",
     color = "Z", shape = "Z"
   ) +
   theme_bw() +
