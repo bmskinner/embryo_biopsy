@@ -466,13 +466,12 @@ whole.halves.fig <- ggplot(whole.halves.data, aes(x = cgroup, y = p_outcome)) +
     data = tests[tests$seg_type == "Whole chromosome", ], aes(y = 53, x = x, label = paste0("p=", round(p.adj, digits = 4))),
     size = 2
   ) +
-  labs(y = "Positive outcome (%)", title = "Whole chromosome mosaics") +
+  labs(y = "Positive outcome (%)", title = "Whole chromosome mosaics", x = "Mosaic level") +
   scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
   coord_cartesian(ylim = c(0, YMAX.PCT)) +
   scale_fill_manual(values = c("grey", opb.colour)) +
   theme_bw() +
   theme(
-    axis.title.x = element_blank(),
     plot.title = element_text(hjust = 0.5, size = 8),
     legend.title = element_blank(),
     legend.position = "none",
@@ -523,13 +522,12 @@ seg.halves.fig <- ggplot(seg.halves.data, aes(x = cgroup, y = p_outcome)) +
     data = tests[tests$seg_type == "Segmental only", ], aes(y = 58, x = x, label = paste0("p=", round(p.adj, digits = 4))),
     size = 2
   ) +
-  labs(y = "Positive outcome (%)", title = "Segmental mosaics") +
+  labs(y = "Positive outcome (%)", title = "Segmental mosaics", x = "Mosaic level") +
   scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
   coord_cartesian(ylim = c(0, YMAX.PCT)) +
   scale_fill_manual(values = c("grey", opb.colour)) +
   theme_bw() +
   theme(
-    axis.title.x = element_blank(),
     plot.title = element_text(hjust = 0.5, size = 8),
     legend.title = element_blank(),
     legend.position = "none",
@@ -583,13 +581,12 @@ both.halves.fig <- ggplot(both.halves.data, aes(x = cgroup, y = p_outcome)) +
     data = tests[tests$seg_type == "All", ], aes(y = 58, x = x, label = paste0("p=", round(p.adj, digits = 4))),
     size = 2
   ) +
-  labs(y = "Positive outcome (%)", title = "All mosaics") +
+  labs(y = "Positive outcome (%)", title = "All mosaics", x = "Mosaic level") +
   scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
   coord_cartesian(ylim = c(0, YMAX.PCT)) +
   scale_fill_manual(values = c("grey", opb.colour)) +
   theme_bw() +
   theme(
-    axis.title.x = element_blank(),
     plot.title = element_text(hjust = 0.5, size = 8),
     legend.title = element_blank(),
     legend.position = "none",
@@ -600,9 +597,8 @@ both.halves.fig <- ggplot(both.halves.data, aes(x = cgroup, y = p_outcome)) +
   )
 
 
-fig9.full <- (combined.plot + whole.plot + seg.plot) / (both.halves.fig + whole.halves.fig + seg.halves.fig) +
-  plot_annotation(tag_levels = list(c("A", "", "", "B", "", "")))
-save.double.width(fig9.full, filename = "figure/Figure_9_full", height = 140)
+fig9.full <- (both.halves.fig + whole.halves.fig + seg.halves.fig)
+save.double.width(fig9.full, filename = "figure/Figure_9_full", height = 70)
 
 
 
