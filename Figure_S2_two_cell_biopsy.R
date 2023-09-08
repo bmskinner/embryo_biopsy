@@ -53,18 +53,18 @@ make.two.biopsy.heatmap <- function(data, zero.data) {
 
 # plot - the heat map
 # biopsy.size - the size of biopsy to annotate
-draw.biopsy.pgdis.classes <- function(plot, biopsy.size) {
+draw.biopsy.classes <- function(plot, biopsy.size) {
   plot +
     geom_rect(
       xmin = -5, xmax = 15, ymin = -0.025, ymax = 0.175,
       fill = NA, col = "white", size = 1
     ) +
     geom_rect(
-      xmin = 15, xmax = 35, ymin = 0.175, ymax = 0.375,
+      xmin = 15, xmax = 45, ymin = 0.175, ymax = 0.475,
       fill = NA, col = "white", size = 1
     ) +
     geom_rect(
-      xmin = 35, xmax = 85, ymin = 0.375, ymax = 0.825,
+      xmin = 45, xmax = 85, ymin = 0.475, ymax = 0.825,
       fill = NA, col = "white", size = 1
     ) +
     geom_rect(
@@ -72,23 +72,6 @@ draw.biopsy.pgdis.classes <- function(plot, biopsy.size) {
       fill = NA, col = "white", size = 1
     )
 }
-
-draw.biopsy.merge.classes <- function(plot, biopsy.size) {
-  plot +
-    geom_rect(
-      xmin = -5, xmax = 15, ymin = -0.025, ymax = 0.175,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 15, xmax = 85, ymin = 0.175, ymax = 0.825,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 85, xmax = 105, ymin = 0.825, ymax = 1.025,
-      fill = NA, col = "white", size = 1
-    )
-}
-
 
 calc.column.data <- function(data, class.function) {
   data %>%
@@ -146,36 +129,19 @@ zero.data <- expand.grid(
 )
 
 # Plot with PGDIS classes
-hmap.plot.pgdis <- make.two.biopsy.heatmap(filt.data, zero.data)
-hmap.plot.pgdis <- draw.biopsy.pgdis.classes(hmap.plot.pgdis, b)
+hmap.plot.equal <- make.two.biopsy.heatmap(filt.data, zero.data)
+hmap.plot.equal <- draw.biopsy.classes(hmap.plot.equal, b)
 
-save.double.width(hmap.plot.pgdis,
+save.double.width(hmap.plot.equal,
   filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_predictive_heatmap_two_biopsy_", b),
   height = 150
 )
 
-# Plot with merge classes
-hmap.plot.merge <- make.two.biopsy.heatmap(filt.data, zero.data)
-hmap.plot.merge <- draw.biopsy.merge.classes(hmap.plot.merge, b)
-
-save.double.width(hmap.plot.merge,
-  filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_heatmap_two_biopsy_merge_", b),
-  height = 150
-)
-
 # Make columns
-col.data.pgdis <- calc.column.data(filt.data, to.pgdis.class)
-col.plot.pgdis <- make.two.biopsy.column.plot(col.data.pgdis, b)
+col.data.equal <- calc.column.data(filt.data, to.equal.class)
+col.plot.equal <- make.two.biopsy.column.plot(col.data.pgdis, b)
 
-save.double.width(col.plot.pgdis,
+save.double.width(col.plot.equal,
   filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S3_predictive_columns_two_biopsy_", b),
-  height = 150
-)
-
-col.data.merge <- calc.column.data(filt.data, to.merged.class)
-col.plot.merge <- make.two.biopsy.column.plot(col.data.merge, b)
-
-save.double.width(col.plot.merge,
-  filename = paste0(FIGURE.OUTPUT.DIR, "/predictive_columns_two_biopsy_merge_", b),
   height = 150
 )

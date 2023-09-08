@@ -110,6 +110,26 @@ plot.pgdis.heatmap <- function(data, zero.data) {
     )
 }
 
+plot.equal.heatmap <- function(data, zero.data) {
+  plot.heatmap(data, zero.data) +
+    geom_rect(
+      xmin = -10, xmax = 10, ymin = -2.5, ymax = 19.5,
+      fill = NA, col = "white", size = 1
+    ) +
+    geom_rect(
+      xmin = 10, xmax = 50, ymin = 19.5, ymax = 49.5,
+      fill = NA, col = "white", size = 1
+    ) +
+    geom_rect(
+      xmin = 50, xmax = 90, ymin = 49.5, ymax = 80.5,
+      fill = NA, col = "white", size = 1
+    ) +
+    geom_rect(
+      xmin = 90, xmax = 110, ymin = 80.5, ymax = 102.5,
+      fill = NA, col = "white", size = 1
+    )
+}
+
 # Make a heatmap with merged class annotations 20% and 80%
 plot.merge.heatmap <- function(data, zero.data) {
   plot.heatmap(data, zero.data) +

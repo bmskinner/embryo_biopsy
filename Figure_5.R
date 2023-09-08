@@ -27,8 +27,8 @@ biopsy.aggregate <- biopsy.values %>%
   ) %>%
   dplyr::group_by(Biopsy_size, n_aneuploid) %>%
   dplyr::mutate(
-    total_biopsies = sum(n_biopsies_pgdis),
-    pct_biopsies = n_biopsies_pgdis / total_biopsies * 100
+    total_biopsies = sum(n_biopsies_equal),
+    pct_biopsies = n_biopsies_equal / total_biopsies * 100
   )
 
 zero.data <- expand.grid(

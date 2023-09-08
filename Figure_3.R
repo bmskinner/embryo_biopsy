@@ -21,18 +21,18 @@ plot.values <- agg.values %>%
   dplyr::filter(Biopsy_size == 5) %>%
   dplyr::group_by(Aneuploidy, Dispersal, Biopsy_size) %>%
   dplyr::summarise(
-    pct_pgdis_match = mean(f_pgdis_match) * 100,
-    sd_pgdis_match = sd(f_pgdis_match) * 100
+    pct_equal_match = mean(f_equal_match) * 100,
+    sd_equal_match = sd(f_equal_match) * 100
   )
 
-p <- ggplot(plot.values, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_pgdis_match)) +
+p <- ggplot(plot.values, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_equal_match)) +
   geom_raster() +
   geom_vline(xintercept = 19.5, col = "white") +
-  geom_vline(xintercept = 39.5, col = "white") +
+  geom_vline(xintercept = 49.5, col = "white") +
   geom_vline(xintercept = 80.5, col = "white") +
   annotate(geom = "text", label = "Euploid", x = 10, y = 1.06, size = 3) +
-  annotate(geom = "text", label = "Low", x = 30, y = 1.06, size = 3) +
-  annotate(geom = "text", label = "High", x = 60, y = 1.06, size = 3) +
+  annotate(geom = "text", label = "Low", x = 35, y = 1.06, size = 3) +
+  annotate(geom = "text", label = "High", x = 65, y = 1.06, size = 3) +
   annotate(geom = "text", label = "Aneuploid", x = 91, y = 1.06, size = 3) +
   labs(
     x = "Embryo aneuploidy",

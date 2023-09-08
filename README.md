@@ -32,9 +32,9 @@ There are three main scripts:
 
 - `makeCombos.R` : creates the model embryos and takes biopsies. Biopsies are saved in `./data/raw/`
 - `analyseCombos.R` : aggregates the raw values for figure generation. Outputs are saved in `./data/aggregates/`
-- `makeFigures.R` : creates summary figures. Outputs are saved in `./figure/`
+- `Figure_xxxx.R` : create the summary figures. Outputs are saved in `./figure/`
 
-Clone this repo and invoke the scripts using Rscript:
+Clone this repo and invoke the scripts using Rscript _e.g_:
 
 ```
 Rscript makeCombos.R

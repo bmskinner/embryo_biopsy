@@ -17,18 +17,18 @@ fread,
 header = T, mc.cores = N.CORES
 ))
 
-# Filter to 5-cell biopsy and calculate matching percentage
+# calculate matching percentage
 plot.values <- agg.values %>%
   dplyr::group_by(Aneuploidy, Dispersal, Biopsy_size) %>%
   dplyr::summarise(
-    pct_pgdis_match = mean(f_pgdis_match) * 100,
-    sd_pgdis_match = sd(f_pgdis_match) * 100
+    pct_equal_match = mean(f_equal_match) * 100,
+    sd_equal_match = sd(f_equal_match) * 100
   )
 
-p <- ggplot(plot.values, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_pgdis_match)) +
+p <- ggplot(plot.values, aes(x = Aneuploidy * 100, y = Dispersal, fill = pct_equal_match)) +
   geom_raster() +
   geom_vline(xintercept = 19.5, col = "white") +
-  geom_vline(xintercept = 39.5, col = "white") +
+  geom_vline(xintercept = 49.5, col = "white") +
   geom_vline(xintercept = 80.5, col = "white") +
   labs(
     x = "Embryo aneuploidy",

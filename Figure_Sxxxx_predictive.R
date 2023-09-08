@@ -49,11 +49,11 @@ hmap.plot <- ggplot(heatmap.data, aes(x = f_aneuploid, y = Aneuploidy, fill = Pc
     fill = NA, col = "white", size = 1
   ) +
   geom_rect(
-    xmin = 10, xmax = 30, ymin = 0.195, ymax = 0.395,
+    xmin = 10, xmax = 50, ymin = 0.195, ymax = 0.495,
     fill = NA, col = "white", size = 1
   ) +
   geom_rect(
-    xmin = 30, xmax = 90, ymin = 0.395, ymax = 0.805,
+    xmin = 50, xmax = 90, ymin = 0.495, ymax = 0.805,
     fill = NA, col = "white", size = 1
   ) +
   geom_rect(

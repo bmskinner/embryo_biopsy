@@ -42,7 +42,7 @@ zero.data <- expand.grid(
 )
 
 # Part A - heatmap
-fig6A.plot <- plot.pgdis.heatmap(fig6A.data, zero.data) + plot_annotation(tag_levels = list(c("A")))
+fig6A.plot <- plot.equal.heatmap(fig6A.data, zero.data) + plot_annotation(tag_levels = list(c("A")))
 
 
 # Calculate the proportion of embryos matching biopsy class
@@ -53,8 +53,8 @@ fig6B.data <- raw.values %>%
   tidyr::unnest(n_aneuploid) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(
-    EmbryoClass = to.pgdis.class(Aneuploidy),
-    BiopsyClass = to.pgdis.class(n_aneuploid / Biopsy_size)
+    EmbryoClass = to.equal.class(Aneuploidy),
+    BiopsyClass = to.equal.class(n_aneuploid / Biopsy_size)
   ) %>%
   dplyr::group_by(Dispersal, n_aneuploid, EmbryoClass, BiopsyClass, Biopsy_size) %>%
   dplyr::summarise(Count = dplyr::n()) %>%
