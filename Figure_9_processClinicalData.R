@@ -455,31 +455,44 @@ whole.lines.data <- data.frame(
   )
 )
 
-opb.colour <- "#ff6d6dff" # eyedropper from transparent region of upper panels, but with more saturation because there is full red in the upper panels
+opb.colour <- "#3f3333ff"
+imp.colour <- "grey"
+text.colours <- c("black", "black", "white", "white")
+p.val.text.size <- 2.2
 
+outcome.theme <- function(plot) {
+  plot +
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 8),
+      axis.text = element_text(size = 8),
+      axis.title = element_text(size = 9),
+      legend.title = element_blank(),
+      legend.position = "none",
+      legend.text = element_text(size = 8),
+      legend.background = element_blank(),
+      legend.key = element_blank(),
+      legend.key.size = unit(1.5, "mm")
+    )
+}
+
+# opb.colour <- "#ff6d6dff" # eyedropper from transparent region of upper panels, but with more saturation because there is full red in the upper panels
+
+# Panel for whole chromosome mosaics
 whole.halves.fig <- ggplot(whole.halves.data, aes(x = cgroup, y = p_outcome)) +
   geom_col(aes(fill = Type)) +
   geom_segment(data = whole.lines.data, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
-  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = 2) +
-  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = 2) +
+  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = p.val.text.size, col = text.colours) +
+  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = p.val.text.size, col = text.colours) +
   geom_text(
     data = tests[tests$seg_type == "Whole chromosome", ], aes(y = 53, x = x, label = paste0("p=", round(p.adj, digits = 4))),
-    size = 2
+    size = p.val.text.size
   ) +
   labs(y = "Positive outcome (%)", title = "Whole chromosome mosaics", x = "Mosaic level") +
   scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
   coord_cartesian(ylim = c(0, YMAX.PCT)) +
-  scale_fill_manual(values = c("grey", opb.colour)) +
-  theme_bw() +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 8),
-    legend.title = element_blank(),
-    legend.position = "none",
-    legend.text = element_text(size = 8),
-    legend.background = element_blank(),
-    legend.key = element_blank(),
-    legend.key.size = unit(1.5, "mm")
-  )
+  scale_fill_manual(values = c(imp.colour, opb.colour)) +
+  theme_bw() %>%
+  outcome.theme()
 
 
 seg.halves.data <- combined.halves.data %>%
@@ -512,30 +525,22 @@ seg.lines.data <- data.frame(
   )
 )
 
-# Segmental only, 50/50 split figure
+# Panel for segmental chromosome mosaics
 seg.halves.fig <- ggplot(seg.halves.data, aes(x = cgroup, y = p_outcome)) +
   geom_col(aes(fill = Type)) +
   geom_segment(data = seg.lines.data, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
-  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = 2) +
-  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = 2) +
+  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = p.val.text.size, col = text.colours) +
+  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = p.val.text.size, col = text.colours) +
   geom_text(
     data = tests[tests$seg_type == "Segmental only", ], aes(y = 58, x = x, label = paste0("p=", round(p.adj, digits = 4))),
-    size = 2
+    size = p.val.text.size
   ) +
   labs(y = "Positive outcome (%)", title = "Segmental mosaics", x = "Mosaic level") +
   scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
   coord_cartesian(ylim = c(0, YMAX.PCT)) +
-  scale_fill_manual(values = c("grey", opb.colour)) +
-  theme_bw() +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 8),
-    legend.title = element_blank(),
-    legend.position = "none",
-    legend.text = element_text(size = 8),
-    legend.background = element_blank(),
-    legend.key = element_blank(),
-    legend.key.size = unit(1.5, "mm")
-  )
+  scale_fill_manual(values = c(imp.colour, opb.colour)) +
+  theme_bw() %>%
+  outcome.theme()
 
 both.halves.data <- combined.halves.data %>%
   dplyr::ungroup() %>%
@@ -572,29 +577,28 @@ both.lines.data <- data.frame(
   )
 )
 
+# Panel for all mosaics
 both.halves.fig <- ggplot(both.halves.data, aes(x = cgroup, y = p_outcome)) +
   geom_col(aes(fill = Type)) +
   geom_segment(data = both.lines.data, aes(x = xstart, y = ystart, xend = xend, yend = yend)) +
-  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = 2) +
-  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = 2) +
+  geom_text(aes(y = p_outcome - 5, label = round(p_outcome, digits = 2)), size = p.val.text.size, col = text.colours) +
+  geom_text(aes(y = 5, label = paste0("n=", round(total_embryos, digits = 2))), size = p.val.text.size, col = text.colours) +
   geom_text(
-    data = tests[tests$seg_type == "All", ], aes(y = 58, x = x, label = paste0("p=", round(p.adj, digits = 4))),
-    size = 2
+    data = tests[tests$seg_type == "All", ], aes(y = 54.5, x = x, label = paste0("p=", round(p.adj, digits = 4))),
+    size = p.val.text.size
   ) +
+
+  # Add manual legend
+  annotate("rect", xmin = 1, xmax = 1.23, ymin = 67, ymax = 70, fill = imp.colour, col = "black") +
+  annotate("rect", xmin = 1, xmax = 1.23, ymin = 62, ymax = 65, fill = opb.colour, col = "black") +
+  annotate("text", x = 1.29, y = 68.5, label = "Implantation", size = p.val.text.size, hjust = 0, col = "black") +
+  annotate("text", x = 1.29, y = 63.5, label = "Ongoing Pregnancy/Birth", size = p.val.text.size, hjust = 0, col = "black") +
   labs(y = "Positive outcome (%)", title = "All mosaics", x = "Mosaic level") +
   scale_x_discrete(labels = c("<50%", "\u226550%", "<50%", "\u226550%")) +
   coord_cartesian(ylim = c(0, YMAX.PCT)) +
-  scale_fill_manual(values = c("grey", opb.colour)) +
-  theme_bw() +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 8),
-    legend.title = element_blank(),
-    legend.position = "none",
-    legend.text = element_text(size = 8),
-    legend.background = element_blank(),
-    legend.key = element_blank(),
-    legend.key.size = unit(1.5, "mm")
-  )
+  scale_fill_manual(values = c(imp.colour, opb.colour)) +
+  theme_bw() %>%
+  outcome.theme()
 
 
 fig9.full <- (both.halves.fig + whole.halves.fig + seg.halves.fig)
