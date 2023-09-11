@@ -7,14 +7,14 @@ library(parallel)
 library(patchwork)
 
 # Return the embryo class for a given fractional aneuploidy
-to.pgdis.class <- function(f.aneuploidy) {
-  case_when(
-    f.aneuploidy < 0.20 ~ "Euploid",
-    f.aneuploidy < 0.40 ~ "Low level",
-    f.aneuploidy <= 0.80 ~ "High level",
-    f.aneuploidy <= 1 ~ "Aneuploid"
-  )
-}
+# to.pgdis.class <- function(f.aneuploidy) {
+#   case_when(
+#     f.aneuploidy < 0.20 ~ "Euploid",
+#     f.aneuploidy < 0.40 ~ "Low level",
+#     f.aneuploidy <= 0.80 ~ "High level",
+#     f.aneuploidy <= 1 ~ "Aneuploid"
+#   )
+# }
 
 # Return the equal split class for a given fractional aneuploidy
 to.equal.class <- function(f.aneuploidy) {
@@ -28,22 +28,22 @@ to.equal.class <- function(f.aneuploidy) {
 
 
 # Return the merged class for a given fractional aneuploidy
-to.merged.class <- function(f.aneuploidy) {
-  case_when(
-    f.aneuploidy < 0.20 ~ "Euploid",
-    f.aneuploidy <= 0.80 ~ "Mosaic",
-    f.aneuploidy <= 1 ~ "Aneuploid"
-  )
-}
-
-# Return the mergec class for a given fractional aneuploidy
-to.merged.class.2 <- function(f.aneuploidy) {
-  case_when(
-    f.aneuploidy < 0.10 ~ "Euploid",
-    f.aneuploidy <= 0.90 ~ "Mosaic",
-    f.aneuploidy <= 1 ~ "Aneuploid"
-  )
-}
+# to.merged.class <- function(f.aneuploidy) {
+#   case_when(
+#     f.aneuploidy < 0.20 ~ "Euploid",
+#     f.aneuploidy <= 0.80 ~ "Mosaic",
+#     f.aneuploidy <= 1 ~ "Aneuploid"
+#   )
+# }
+#
+# # Return the mergec class for a given fractional aneuploidy
+# to.merged.class.2 <- function(f.aneuploidy) {
+#   case_when(
+#     f.aneuploidy < 0.10 ~ "Euploid",
+#     f.aneuploidy <= 0.90 ~ "Mosaic",
+#     f.aneuploidy <= 1 ~ "Aneuploid"
+#   )
+# }
 
 # Save a plot with arbirary dimensions (in mm)
 save.plot <- function(plot, filename, width, height) {
@@ -152,7 +152,7 @@ plot.columns <- function(data) {
   ggplot(data, aes(x = n_aneuploid / Biopsy_size * 100, y = PctTotal, fill = IsCorrect)) +
     geom_hline(yintercept = 50) +
     geom_col(position = "stack") +
-    scale_fill_manual(values = c("dark green")) +
+    scale_fill_manual(values = c(BIOPSY.COLUMN.RGB)) + # dark grey, hint of green
     scale_x_continuous(breaks = seq(0, 100, 20)) +
     scale_y_continuous(breaks = seq(0, 100, 20)) +
     coord_cartesian(ylim = c(0, 100)) +
@@ -165,5 +165,28 @@ plot.columns <- function(data) {
     theme(
       legend.position = "none",
       axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
+    )
+}
+
+
+# plot - the heat map
+# biopsy.size - the size of biopsy to annotate
+draw.ten.cell.biopsy.classes <- function(plot) {
+  plot +
+    geom_rect(
+      xmin = -5, xmax = 15, ymin = -0.025, ymax = 0.175,
+      fill = NA, col = "white", size = 1
+    ) +
+    geom_rect(
+      xmin = 15, xmax = 45, ymin = 0.175, ymax = 0.475,
+      fill = NA, col = "white", size = 1
+    ) +
+    geom_rect(
+      xmin = 45, xmax = 85, ymin = 0.475, ymax = 0.825,
+      fill = NA, col = "white", size = 1
+    ) +
+    geom_rect(
+      xmin = 85, xmax = 105, ymin = 0.825, ymax = 1.025,
+      fill = NA, col = "white", size = 1
     )
 }

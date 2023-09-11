@@ -8,6 +8,7 @@ library(parallel)
 
 source("parameters.R")
 source("functions.R")
+
 # Read in the aggregate values
 agg.values <- do.call(rbind, mclapply(list.files(
   path = AGGREGATE.DATA.PATH,

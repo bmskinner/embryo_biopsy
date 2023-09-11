@@ -12,3 +12,7 @@ TWO.BIOPSY.DATA.PATH <- "data/two_biopsy"
 
 # Where figures should be saved
 FIGURE.OUTPUT.DIR <- "figure"
+
+# Colours
+VIRIDIS.MIN.RGB <- "#440154ff"
+BIOPSY.COLUMN.RGB <- "#333f33ff"

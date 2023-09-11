@@ -51,28 +51,6 @@ make.two.biopsy.heatmap <- function(data, zero.data) {
     theme(panel.grid = element_blank())
 }
 
-# plot - the heat map
-# biopsy.size - the size of biopsy to annotate
-draw.biopsy.classes <- function(plot, biopsy.size) {
-  plot +
-    geom_rect(
-      xmin = -5, xmax = 15, ymin = -0.025, ymax = 0.175,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 15, xmax = 45, ymin = 0.175, ymax = 0.475,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 45, xmax = 85, ymin = 0.475, ymax = 0.825,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 85, xmax = 105, ymin = 0.825, ymax = 1.025,
-      fill = NA, col = "white", size = 1
-    )
-}
-
 calc.column.data <- function(data, class.function) {
   data %>%
     dplyr::filter(Biopsy_size == b) %>%
@@ -96,7 +74,7 @@ make.two.biopsy.column.plot <- function(data, biopsy.size) {
   ggplot(data, aes(x = n_aneuploid / biopsy.size * 100, y = PctTotal, fill = IsCorrect)) +
     geom_hline(yintercept = 50) +
     geom_col(position = "stack") +
-    scale_fill_manual(values = c("dark green")) +
+    scale_fill_manual(values = c(BIOPSY.COLUMN.RGB)) +
     scale_x_continuous(
       breaks = seq(0, 100, 20),
       sec.axis = sec_axis(~., name = "Dispersal of aneuploid cells", breaks = NULL, labels = NULL)
@@ -128,20 +106,22 @@ zero.data <- expand.grid(
   PctTotal = 0
 )
 
-# Plot with PGDIS classes
+# Plot two biopsy heatmap
 hmap.plot.equal <- make.two.biopsy.heatmap(filt.data, zero.data)
-hmap.plot.equal <- draw.biopsy.classes(hmap.plot.equal, b)
+hmap.plot.equal <- draw.ten.cell.biopsy.classes(hmap.plot.equal)
 
 save.double.width(hmap.plot.equal,
   filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_predictive_heatmap_two_biopsy_", b),
   height = 150
 )
 
-# Make columns
+# Make two biopsy column plot
 col.data.equal <- calc.column.data(filt.data, to.equal.class)
-col.plot.equal <- make.two.biopsy.column.plot(col.data.pgdis, b)
+col.plot.equal <- make.two.biopsy.column.plot(col.data.equal, b)
 
 save.double.width(col.plot.equal,
   filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S3_predictive_columns_two_biopsy_", b),
   height = 150
 )
+
+# how does this compare to a 10-cell or five cell biopsy?

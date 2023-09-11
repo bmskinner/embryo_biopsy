@@ -21,25 +21,25 @@ summ <- pool.results %>%
   )
 
 
-full.plot.data <- summ %>% dplyr::filter(best.size %in% c(2, 4, 6, 8))
+full.plot.data <- summ %>% dplyr::filter(best.size %in% c(2, 3, 4, 5, 6, 7, 8))
 
 # Make the full plot
 p1 <- ggplot(full.plot.data, aes(x = disp, y = MeanPct)) +
-  # geom_hline(yintercept = 50) +
+  geom_hline(yintercept = 50) +
   geom_ribbon(aes(x = disp, ymin = MeanPct - SdPct, ymax = MeanPct + SdPct), fill = "darkgrey", alpha = 0.5) +
   geom_point() +
   labs(x = "Dispersal", y = "Mean percent correctly selected embryos") +
   coord_cartesian(ylim = c(0, 110)) +
   scale_y_continuous(
-    breaks = seq(0, 150, 20),
-    sec.axis = sec_axis(~., name = "Numner of selected embryos", breaks = NULL, labels = NULL)
+    breaks = seq(0, 150, 25),
+    sec.axis = sec_axis(~., name = "Number of selected embryos (k)", breaks = NULL, labels = NULL)
   ) +
-  scale_x_continuous(sec.axis = sec_axis(~., name = "Embryo pool size", breaks = NULL, labels = NULL)) +
+  scale_x_continuous(sec.axis = sec_axis(~., name = "Embryo pool size (n)", breaks = NULL, labels = NULL)) +
   facet_grid(best.size ~ pool.size) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
 
-save.double.width(p1, height = 170, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_xxxx_rank_pool"))
+save.double.width(p1, height = 170, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S7_rank_pool"))
 
 
 # Make a plot with just a single pool size
@@ -52,4 +52,4 @@ p2 <- ggplot(filt, aes(x = disp, y = MeanPct)) +
   coord_cartesian(ylim = c(0, 110)) +
   scale_y_continuous(breaks = seq(0, 150, 10)) +
   theme_bw()
-save.single.width(p2, height = 85, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_xxxx_rank_pool_single"))
+save.single.width(p2, height = 85, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_8_rank_pool_single"))
