@@ -78,7 +78,7 @@ out.combined.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
     legend.key = element_rect(fill = "transparent"),
     legend.background = element_blank()
   )
-save.double.width(out.combined.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S5_ranks_split"), 170)
+save.double.width(out.combined.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S4_ranks_split"), 170)
 
 # Split the values for no.rank between the correct and incorrect
 # Can't get error bars direct from this - recalculate from original values
@@ -129,4 +129,4 @@ out.split.plot <- ggplot(filt, aes(x = Aneu.diff * 100)) +
     legend.key = element_rect(fill = "transparent"),
     legend.background = element_blank()
   )
-save.double.width(out.split.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S6_ranks_combined"), 170)
+save.double.width(out.split.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S5_ranks_combined"), 170)

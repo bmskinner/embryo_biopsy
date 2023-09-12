@@ -51,25 +51,6 @@ make.two.biopsy.heatmap <- function(data, zero.data) {
     theme(panel.grid = element_blank())
 }
 
-calc.column.data <- function(data, class.function) {
-  data %>%
-    dplyr::filter(Biopsy_size == b) %>%
-    dplyr::mutate(
-      EmbryoClass = class.function(Aneuploidy),
-      BiopsyClass = class.function(n_aneuploid / Biopsy_size)
-    ) %>%
-    dplyr::group_by(Dispersal, n_aneuploid, Embryo_size, EmbryoClass, BiopsyClass) %>%
-    dplyr::summarise(Count = sum(Total_biopsies)) %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(Embryo_size, n_aneuploid, Dispersal) %>%
-    dplyr::mutate(
-      Total = sum(Count),
-      PctTotal = Count / Total * 100,
-      IsCorrect = EmbryoClass == BiopsyClass
-    ) %>%
-    dplyr::filter(IsCorrect)
-}
-
 make.two.biopsy.column.plot <- function(data, biopsy.size) {
   ggplot(data, aes(x = n_aneuploid / biopsy.size * 100, y = PctTotal, fill = IsCorrect)) +
     geom_hline(yintercept = 50) +
@@ -94,7 +75,6 @@ make.two.biopsy.column.plot <- function(data, biopsy.size) {
 }
 
 
-# for (b in BIOPSY.SIZES) {
 b <- 5
 filt.data <- in.data %>%
   dplyr::filter(Biopsy_size == b)
@@ -111,12 +91,27 @@ hmap.plot.equal <- make.two.biopsy.heatmap(filt.data, zero.data)
 hmap.plot.equal <- draw.ten.cell.biopsy.classes(hmap.plot.equal)
 
 save.double.width(hmap.plot.equal,
-  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_predictive_heatmap_two_biopsy_", b),
+  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2b_predictive_heatmap_two_biopsy_", b),
   height = 150
 )
 
 # Make two biopsy column plot
-col.data.equal <- calc.column.data(filt.data, to.equal.class)
+col.data.equal <- filt.data %>%
+  dplyr::filter(Biopsy_size == b) %>%
+  dplyr::mutate(
+    EmbryoClass = to.equal.class(Aneuploidy),
+    BiopsyClass = to.equal.class(n_aneuploid / Biopsy_size)
+  ) %>%
+  dplyr::group_by(Dispersal, n_aneuploid, Embryo_size, EmbryoClass, BiopsyClass) %>%
+  dplyr::summarise(Count = sum(Total_biopsies)) %>%
+  dplyr::ungroup() %>%
+  dplyr::group_by(Embryo_size, n_aneuploid, Dispersal) %>%
+  dplyr::mutate(
+    Total = sum(Count),
+    PctTotal = Count / Total * 100,
+    IsCorrect = EmbryoClass == BiopsyClass
+  ) %>%
+  dplyr::filter(IsCorrect)
 
 # Save column values to be used in two biopsy comparisons
 write.csv(col.data.equal,
@@ -127,8 +122,48 @@ write.csv(col.data.equal,
 col.plot.equal <- make.two.biopsy.column.plot(col.data.equal, b)
 
 save.double.width(col.plot.equal,
-  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S3_predictive_columns_two_biopsy_", b),
+  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_predictive_columns_two_biopsy_", b),
   height = 150
 )
 
 # how does this compare to a 10-cell or five cell biopsy?
+
+data.1x10 <- fread("data/1x10_cell_biopsy_predictive_columns.csv", header=T)
+data.2x5 <-  fread("data/2x5_cell_biopsy_predictive_columns.csv", header=T)
+
+data.1x10$Type = "1x10"
+data.2x5$Type = "2x5"
+data.2x5$n_aneuploid = data.2x5$n_aneuploid*2
+
+data.all <- rbind(data.1x10, data.2x5) %>%
+  tidyr::pivot_wider(id_cols = c(n_aneuploid, Dispersal, EmbryoClass, BiopsyClass, Embryo_size), 
+                     values_from = PctTotal, 
+                     names_from = Type) %>%
+  dplyr::mutate(Diff = `2x5`- `1x10` )
+
+
+plot.2x5.vs.1x10 <- ggplot(data.all, aes(x = n_aneuploid* 10, y = Diff)) +
+  geom_hline(yintercept = 0) +
+  geom_col(position = "stack", fill = BIOPSY.COLUMN.RGB) +
+  # scale_fill_manual(values = c(BIOPSY.COLUMN.RGB)) +
+  scale_x_continuous(
+    breaks = seq(0, 100, 20),
+    sec.axis = sec_axis(~., name = "Dispersal of aneuploid cells", breaks = NULL, labels = NULL)
+  ) +
+  scale_y_continuous(
+    breaks = seq(-20, 20, 5),
+    sec.axis = sec_axis(~., name = "Embryo size", breaks = NULL, labels = NULL)
+  ) +
+  coord_cartesian(ylim = c(-15, 15)) +
+  labs(
+    y = "Accuracy of two 5-cell biopsies compared to one 10-cell biopsy (%)",
+    x = "Biopsy aneuploidy (%)"
+  ) +
+  facet_grid(Embryo_size ~ Dispersal) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+save.double.width(plot.2x5.vs.1x10,
+                  filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S3_two_biopsy_vs_one"),
+                  height = 170
+)

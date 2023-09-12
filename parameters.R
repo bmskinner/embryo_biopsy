@@ -6,6 +6,7 @@ BIOPSY.SIZES <- c(3:10, 15, 20, 25, 30)
 EMBRYO.SIZES <- c(100, 150, 200, 250)
 N.CORES <- ifelse(Sys.info()["sysname"] == "Windows", 1, 40)
 
+# Where data files live
 RAW.DATA.PATH <- "data/raw"
 AGGREGATE.DATA.PATH <- "data/aggregates"
 TWO.BIOPSY.DATA.PATH <- "data/two_biopsy"

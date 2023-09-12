@@ -701,4 +701,4 @@ glm.fig <- ggplot() +
     legend.key.size = unit(1.5, "mm")
   )
 
-save.double.width(glm.fig, filename = "figure/Figure_9_glm", height = 85)
+save.double.width(glm.fig, filename = "figure/Figure_S7_glm", height = 85)

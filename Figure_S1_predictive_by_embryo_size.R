@@ -59,7 +59,7 @@ hmap.plot <- ggplot(heatmap.data, aes(x = f_aneuploid, y = Aneuploidy, fill = Pc
 
 hmap.plot <- draw.ten.cell.biopsy.classes(hmap.plot)
 
-save.double.width(hmap.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S1_10-cell_predictive_heatmap"), height = 170)
+save.double.width(hmap.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S1b_10-cell_predictive_heatmap"), height = 170)
 
 ################################################################################
 
@@ -131,4 +131,4 @@ col.plot <- ggplot(col.data, aes(x = n_aneuploid * 10, y = PctTotal, fill = IsCo
   theme_bw() +
   theme(legend.position = "none")
 
-save.double.width(col.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_10-cell_predictive_columns"), height = 170)
+save.double.width(col.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S1_10-cell_predictive_columns"), height = 170)

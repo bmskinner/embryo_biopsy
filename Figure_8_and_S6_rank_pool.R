@@ -39,7 +39,7 @@ p1 <- ggplot(full.plot.data, aes(x = disp, y = MeanPct)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
 
-save.double.width(p1, height = 170, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S7_rank_pool"))
+save.double.width(p1, height = 170, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S6_rank_pool"))
 
 
 # Make a plot with just a single pool size
