@@ -117,6 +117,13 @@ save.double.width(hmap.plot.equal,
 
 # Make two biopsy column plot
 col.data.equal <- calc.column.data(filt.data, to.equal.class)
+
+# Save column values to be used in two biopsy comparisons
+write.csv(col.data.equal,
+  file = paste0("data/2x5_cell_biopsy_predictive_columns.csv"),
+  quote = F, row.names = F, col.names = T
+)
+
 col.plot.equal <- make.two.biopsy.column.plot(col.data.equal, b)
 
 save.double.width(col.plot.equal,

@@ -1,4 +1,4 @@
-# Figure S1 - Predictive heatmap across embryo sizes, 10 cell biopsy
+# Figure S1 and S2 - Predictive heatmap and columns across embryo sizes, 10 cell biopsy
 source("parameters.R")
 source("functions.R")
 
@@ -36,7 +36,7 @@ hmap.plot <- ggplot(heatmap.data, aes(x = f_aneuploid, y = Aneuploidy, fill = Pc
 
   # Zero data background fill
   geom_rect(
-    xmin = -5, xmax = 105, ymin = -0.025, ymax = 1.025,
+    xmin = -5, xmax = 105, ymin = 0, ymax = 1,
     fill = VIRIDIS.MIN.RGB
   ) +
   geom_raster() +
@@ -103,8 +103,14 @@ col.data <- raw.class.data %>%
   ) %>%
   dplyr::filter(IsCorrect)
 
+# Save column values to be used in two biopsy comparisons
+write.csv(col.data,
+  file = paste0("data/1x10_cell_biopsy_predictive_columns.csv"),
+  quote = F, row.names = F, col.names = T
+)
 
-col.plot <- ggplot(data, aes(x = n_aneuploid / biopsy.size * 100, y = PctTotal, fill = IsCorrect)) +
+
+col.plot <- ggplot(col.data, aes(x = n_aneuploid * 10, y = PctTotal, fill = IsCorrect)) +
   geom_hline(yintercept = 50) +
   geom_col(position = "stack") +
   scale_fill_manual(values = c(BIOPSY.COLUMN.RGB)) +
@@ -125,4 +131,4 @@ col.plot <- ggplot(data, aes(x = n_aneuploid / biopsy.size * 100, y = PctTotal, 
   theme_bw() +
   theme(legend.position = "none")
 
-save.double.width(col.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S1_10-cell_predictive_columns"), height = 170)
+save.double.width(col.plot, filename = paste0(FIGURE.OUTPUT.DIR, "/Figure_S2_10-cell_predictive_columns"), height = 170)
