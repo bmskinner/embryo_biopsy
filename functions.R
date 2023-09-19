@@ -6,16 +6,6 @@ library(data.table)
 library(parallel)
 library(patchwork)
 
-# Return the embryo class for a given fractional aneuploidy
-# to.pgdis.class <- function(f.aneuploidy) {
-#   case_when(
-#     f.aneuploidy < 0.20 ~ "Euploid",
-#     f.aneuploidy < 0.40 ~ "Low level",
-#     f.aneuploidy <= 0.80 ~ "High level",
-#     f.aneuploidy <= 1 ~ "Aneuploid"
-#   )
-# }
-
 # Return the equal split class for a given fractional aneuploidy
 to.equal.class <- function(f.aneuploidy) {
   case_when(
@@ -25,25 +15,6 @@ to.equal.class <- function(f.aneuploidy) {
     f.aneuploidy <= 1 ~ "Aneuploid"
   )
 }
-
-
-# Return the merged class for a given fractional aneuploidy
-# to.merged.class <- function(f.aneuploidy) {
-#   case_when(
-#     f.aneuploidy < 0.20 ~ "Euploid",
-#     f.aneuploidy <= 0.80 ~ "Mosaic",
-#     f.aneuploidy <= 1 ~ "Aneuploid"
-#   )
-# }
-#
-# # Return the mergec class for a given fractional aneuploidy
-# to.merged.class.2 <- function(f.aneuploidy) {
-#   case_when(
-#     f.aneuploidy < 0.10 ~ "Euploid",
-#     f.aneuploidy <= 0.90 ~ "Mosaic",
-#     f.aneuploidy <= 1 ~ "Aneuploid"
-#   )
-# }
 
 # Save a plot with arbirary dimensions (in mm)
 save.plot <- function(plot, filename, width, height) {
@@ -89,26 +60,6 @@ plot.heatmap <- function(data, zero.data) {
     )
 }
 
-# Make a heatmap with PGDIS class annotations
-plot.pgdis.heatmap <- function(data, zero.data) {
-  plot.heatmap(data, zero.data) +
-    geom_rect(
-      xmin = -10, xmax = 10, ymin = -2.5, ymax = 19.5,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 10, xmax = 30, ymin = 19.5, ymax = 39.5,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 30, xmax = 90, ymin = 39.5, ymax = 80.5,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 90, xmax = 110, ymin = 80.5, ymax = 102.5,
-      fill = NA, col = "white", size = 1
-    )
-}
 
 plot.equal.heatmap <- function(data, zero.data) {
   plot.heatmap(data, zero.data) +
@@ -130,24 +81,7 @@ plot.equal.heatmap <- function(data, zero.data) {
     )
 }
 
-# Make a heatmap with merged class annotations 20% and 80%
-plot.merge.heatmap <- function(data, zero.data) {
-  plot.heatmap(data, zero.data) +
-    geom_rect(
-      xmin = -10, xmax = 10, ymin = -2.5, ymax = 19.5,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 10, xmax = 90, ymin = 19.5, ymax = 82.5,
-      fill = NA, col = "white", size = 1
-    ) +
-    geom_rect(
-      xmin = 90, xmax = 110, ymin = 82.5, ymax = 102.5,
-      fill = NA, col = "white", size = 1
-    )
-}
-
-# Plot PGDIS/merged classification accuracy column charts
+# Plot sclassification accuracy column charts
 plot.columns <- function(data) {
   ggplot(data, aes(x = n_aneuploid / Biopsy_size * 100, y = PctTotal, fill = IsCorrect)) +
     geom_hline(yintercept = 50) +
@@ -170,7 +104,6 @@ plot.columns <- function(data) {
 
 
 # plot - the heat map
-# biopsy.size - the size of biopsy to annotate
 draw.ten.cell.biopsy.classes <- function(plot) {
   plot +
     geom_rect(
